@@ -44,6 +44,7 @@ export interface Goal {
   streak: number;
   period_start?: string;
   last_completed_date?: string;
+  already_completed_today?: boolean;
 }
 
 export interface GoalCompletion {

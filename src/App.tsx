@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import LoginPage from "./components/auth/LoginPage";
 import NotFound from "./views/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -21,7 +21,6 @@ import SettingsView from "./views/SettingsView";
 import GoalsView from "./views/GoalsView";
 import { ToastProvider } from "./components/ui/ToastProvider";
 import AchievementsView from "./views/AchievementsView";
-import LandingPage from "./views/LandingPage";
 import AboutPage from "./views/AboutPage";
 import { useMoodData } from "./hooks/useMoodData";
 import { useGroups } from "./hooks/useGroups";
@@ -115,8 +114,8 @@ const AppContent = () => {
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
-    window.addEventListener('nightlio:new-entry', handler);
-    return () => window.removeEventListener('nightlio:new-entry', handler);
+    window.addEventListener('waymark:new-entry', handler);
+    return () => window.removeEventListener('waymark:new-entry', handler);
   }, [location.pathname, navigate]);
 
   return (
@@ -225,7 +224,7 @@ function App() {
             <AuthProvider>
               <PreferencesProvider>
                 <Routes>
-                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/" element={<Navigate to="/login" replace />} />
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route

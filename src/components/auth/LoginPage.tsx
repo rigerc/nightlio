@@ -209,10 +209,10 @@ const LoginPage = () => {
           }}>
             <img
               src="/logo.png"
-              alt="Nightlio logo"
+              alt="Waymark logo"
               style={{ width: '1em', height: '1em', objectFit: 'contain', display: 'block' }}
             />
-            Nightlio
+            Waymark
           </h1>
           <p className="login-page__brand-subtitle" style={{ marginBottom: 0 }}>Your daily mood companion.</p>
         </div>
@@ -220,7 +220,7 @@ const LoginPage = () => {
         <div style={{ marginTop: '0.5rem' }}>
           <p className="login-page__description" style={{ marginBottom: '1.5rem', fontSize: '0.925rem' }}>
             {isSelfHost
-              ? 'Click continue to start using Nightlio locally.'
+              ? 'Click continue to start using Waymark locally.'
               : 'Sign in to continue tracking your mood journey.'}
           </p>
 

@@ -16,7 +16,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<string>(() => {
     try {
-      return localStorage.getItem('nightlio:theme') || 'dark';
+      return localStorage.getItem('waymark:theme') || 'dark';
     } catch {
       return 'dark';
     }
@@ -24,7 +24,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    try { localStorage.setItem('nightlio:theme', theme); } catch { /* ignore */ }
+    try { localStorage.setItem('waymark:theme', theme); } catch { /* ignore */ }
   }, [theme]);
 
   const value = useMemo<ThemeContextValue>(() => ({

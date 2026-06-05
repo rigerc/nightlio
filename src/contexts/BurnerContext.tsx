@@ -16,7 +16,7 @@ const BurnerContext = createContext<BurnerContextValue>({
 export const BurnerProvider = ({ children }: { children: ReactNode }) => {
   const [isBurnerMode, setIsBurnerMode] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('nightlio:burner-mode') === 'on';
+      return localStorage.getItem('waymark:burner-mode') === 'on';
     } catch {
       return false;
     }
@@ -24,7 +24,7 @@ export const BurnerProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('nightlio:burner-mode', isBurnerMode ? 'on' : 'off');
+      localStorage.setItem('waymark:burner-mode', isBurnerMode ? 'on' : 'off');
     } catch { /* ignore */ }
   }, [isBurnerMode]);
 

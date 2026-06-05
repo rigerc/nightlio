@@ -44,6 +44,8 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             self._insert_default_groups()
             self._migrate_groups_schema()
             self._migrate_group_options_schema()
+            self._add_missing_default_groups()
+            self._seed_default_group_colors()
         except Exception as exc:  # pragma: no cover - initialization rarely fails
             logger.error("Database initialization failed: %s", exc)
             raise
@@ -277,37 +279,54 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
     def _insert_default_groups(self) -> None:
         default_groups = {
             "Emotions": [
-                "happy",
-                "excited",
-                "grateful",
-                "relaxed",
-                "content",
-                "tired",
-                "unsure",
-                "bored",
-                "anxious",
-                "angry",
-                "stressed",
-                "sad",
-                "desperate",
+                "happy", "excited", "grateful", "content", "calm",
+                "hopeful", "proud", "loved",
+                "unsure", "bored", "lonely", "anxious",
+                "irritated", "angry", "stressed", "sad",
             ],
             "Sleep": [
-                "well-rested",
-                "refreshed",
-                "tired",
-                "exhausted",
-                "restless",
-                "insomniac",
+                "well-rested", "refreshed", "napped",
+                "tired", "groggy", "exhausted", "restless",
             ],
             "Productivity": [
-                "focused",
-                "motivated",
-                "accomplished",
-                "busy",
-                "distracted",
-                "procrastinating",
-                "overwhelmed",
-                "lazy",
+                "focused", "motivated", "accomplished", "productive", "creative",
+                "busy", "distracted", "scattered", "overwhelmed", "low-energy",
+            ],
+            "Health": [
+                "energetic", "active", "healthy",
+                "sick", "sore", "sluggish",
+            ],
+            "Social": [
+                "connected", "social", "supported",
+                "isolated", "lonely", "missing someone",
+            ],
+            "Romance": [
+                "loved", "affectionate", "romantic", "intimate",
+                "distant", "heartbroken", "longing",
+            ],
+            "Sports": [
+                "worked out", "ran", "cycled", "walked", "stretched", "yoga",
+                "skipped workout", "sedentary",
+            ],
+            "Mental": [
+                "meditated", "journaled", "mindful", "therapy",
+                "scattered", "racing thoughts", "burned out",
+            ],
+            "Chores": [
+                "cleaned", "cooked", "groceries", "laundry", "tidied",
+                "behind on chores",
+            ],
+            "Hobbies": [
+                "read", "gamed", "creative", "music", "art", "crafts",
+                "outdoor", "learned something new",
+            ],
+            "Food": [
+                "ate well", "balanced meals", "cooked at home",
+                "skipped meals", "junk food", "overate", "alcohol",
+            ],
+            "Bad Habits": [
+                "smoked", "drank too much", "late night screen time",
+                "skipped meds", "no exercise", "too much caffeine",
             ],
         }
 
@@ -333,6 +352,96 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
 
             conn.commit()
             logger.info("Default groups ensured")
+
+    def _add_missing_default_groups(self) -> None:
+        """Add new default groups to existing installations that pre-date them."""
+        new_groups = {
+            "Health": [
+                "energetic", "active", "healthy",
+                "sick", "sore", "sluggish",
+            ],
+            "Social": [
+                "connected", "social", "supported",
+                "isolated", "lonely", "missing someone",
+            ],
+            "Romance": [
+                "loved", "affectionate", "romantic", "intimate",
+                "distant", "heartbroken", "longing",
+            ],
+            "Sports": [
+                "worked out", "ran", "cycled", "walked", "stretched", "yoga",
+                "skipped workout", "sedentary",
+            ],
+            "Mental": [
+                "meditated", "journaled", "mindful", "therapy",
+                "scattered", "racing thoughts", "burned out",
+            ],
+            "Chores": [
+                "cleaned", "cooked", "groceries", "laundry", "tidied",
+                "behind on chores",
+            ],
+            "Hobbies": [
+                "read", "gamed", "creative", "music", "art", "crafts",
+                "outdoor", "learned something new",
+            ],
+            "Food": [
+                "ate well", "balanced meals", "cooked at home",
+                "skipped meals", "junk food", "overate", "alcohol",
+            ],
+            "Bad Habits": [
+                "smoked", "drank too much", "late night screen time",
+                "skipped meds", "no exercise", "too much caffeine",
+            ],
+        }
+        try:
+            with self._connect() as conn:
+                for group_name, options in new_groups.items():
+                    cursor = conn.execute(
+                        "SELECT id FROM groups WHERE name = ?", (group_name,)
+                    )
+                    row = cursor.fetchone()
+                    if not row:
+                        cursor = conn.execute(
+                            "INSERT INTO groups (name) VALUES (?)", (group_name,)
+                        )
+                        group_id = cursor.lastrowid
+                        for option in options:
+                            conn.execute(
+                                "INSERT INTO group_options (group_id, name) VALUES (?, ?)",
+                                (group_id, option),
+                            )
+                conn.commit()
+                logger.info("Missing default groups added")
+        except sqlite3.Error as exc:
+            logger.warning("Adding missing default groups failed (non-critical): %s", exc)
+
+    def _seed_default_group_colors(self) -> None:
+        """Set colors on default groups that have no color yet."""
+        default_colors = {
+            "Emotions":   "#ec4899",
+            "Sleep":      "#6366f1",
+            "Productivity": "#f59e0b",
+            "Health":     "#10b981",
+            "Social":     "#3b82f6",
+            "Romance":    "#f43f5e",
+            "Sports":     "#84cc16",
+            "Mental":     "#8b5cf6",
+            "Chores":     "#78716c",
+            "Hobbies":    "#06b6d4",
+            "Food":       "#f97316",
+            "Bad Habits": "#64748b",
+        }
+        try:
+            with self._connect() as conn:
+                for name, color in default_colors.items():
+                    conn.execute(
+                        "UPDATE groups SET color = ? WHERE name = ? AND color IS NULL",
+                        (color, name),
+                    )
+                conn.commit()
+                logger.info("Default group colors seeded")
+        except sqlite3.Error as exc:
+            logger.warning("Seeding default group colors failed (non-critical): %s", exc)
 
 
 __all__ = ["DatabaseSchemaMixin"]

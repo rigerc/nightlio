@@ -2,7 +2,7 @@ import HistoryEntry from './HistoryEntry';
 import AddEntryCard from './AddEntryCard';
 import Skeleton from '../ui/Skeleton';
 
-const HistoryList = ({ entries, loading, error, onDelete, onEdit }) => {
+const HistoryList = ({ entries, loading, error, onDelete, onEdit, groups = [] }) => {
   if (loading) {
     return (
       <div style={{ textAlign: 'left', padding: '1rem 0' }}>
@@ -41,11 +41,12 @@ const HistoryList = ({ entries, loading, error, onDelete, onEdit }) => {
       <div className="card-grid">
         <AddEntryCard />
         {entries.map(entry => (
-          <HistoryEntry 
-            key={entry.id || entry.date} 
-            entry={entry} 
+          <HistoryEntry
+            key={entry.id || entry.date}
+            entry={entry}
             onDelete={onDelete}
             onEdit={onEdit}
+            groups={groups}
           />
         ))}
       </div>

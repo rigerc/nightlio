@@ -1,4 +1,5 @@
 // Utility functions for exporting charts and data
+import { getMoodLabel } from './moodUtils';
 
 function triggerDownload(uri, filename) {
   const link = document.createElement('a');
@@ -7,6 +8,50 @@ function triggerDownload(uri, filename) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+export function exportEntryToMarkdown(entry, groups = []) {
+  const optionToGroup = new Map();
+  for (const group of groups) {
+    for (const option of group.options ?? []) {
+      optionToGroup.set(option.id, group.name);
+    }
+  }
+
+  const groupedActivities = {};
+  for (const sel of entry.selections ?? []) {
+    const groupName = optionToGroup.get(sel.id) ?? 'Other';
+    if (!groupedActivities[groupName]) groupedActivities[groupName] = [];
+    groupedActivities[groupName].push(sel.name);
+  }
+
+  const timeStr = entry.created_at
+    ? new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+    : '';
+
+  let frontmatter = '---\n';
+  frontmatter += `date: "${entry.date ?? ''}"\n`;
+  if (timeStr) frontmatter += `time: "${timeStr}"\n`;
+  frontmatter += `mood: ${entry.mood ?? ''}\n`;
+  frontmatter += `mood_label: "${getMoodLabel(entry.mood)}"\n`;
+
+  if (Object.keys(groupedActivities).length > 0) {
+    frontmatter += 'activities:\n';
+    for (const [groupName, items] of Object.entries(groupedActivities)) {
+      frontmatter += `  ${groupName}:\n`;
+      for (const item of items) {
+        frontmatter += `    - ${item}\n`;
+      }
+    }
+  }
+
+  frontmatter += '---\n\n';
+
+  const mdContent = frontmatter + (entry.content ?? '');
+  const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  triggerDownload(url, `Entry_${entry.date ?? 'Export'}.md`);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export function exportSVGToPNG(svgElement, filename = 'chart.png', scale = 2) {

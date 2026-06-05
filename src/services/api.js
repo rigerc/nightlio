@@ -156,12 +156,6 @@ class ApiService {
     return this.request('/api/streak');
   }
 
-  // Mood music endpoint
-  async getMoodMusic(tag) {
-    const encodedTag = encodeURIComponent(String(tag || 'chill'));
-    return this.request(`/api/music/vibe?tag=${encodedTag}`);
-  }
-
   // Groups endpoints
   async getGroups() {
     return this.request('/api/groups');
@@ -258,33 +252,6 @@ class ApiService {
     return this.request(`/api/goals/${goalId}/completions${q ? `?${q}` : ''}`);
   }
 
-  // Export endpoint
-  async exportPdf(content) {
-    const endpoint = '/api/export/pdf';
-    const base = API_BASE_URL;
-    let url;
-    if (!base) url = endpoint;
-    else if (/^https?:\/\//i.test(base)) url = `${base}${endpoint}`;
-    else url = `${base.replace(/\/+$/g, '')}${endpoint}`;
-    
-    const config = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ content }),
-    };
-
-    if (this.token) {
-      config.headers.Authorization = `Bearer ${this.token}`;
-    }
-
-    const response = await fetch(url, config);
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.status}`);
-    }
-    return response.blob();
-  }
 }
 
 const apiService = new ApiService();

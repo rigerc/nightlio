@@ -4,7 +4,7 @@ import apiService from '../../services/api';
 import { useToast } from '../ui/ToastProvider';
 import EntryModal from './EntryModal';
 
-const HistoryEntry = ({ entry, onDelete, onEdit }) => {
+const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }) => {
   const { icon: IconComponent, color } = getMoodIcon(entry.mood);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -142,6 +142,7 @@ const HistoryEntry = ({ entry, onDelete, onEdit }) => {
           setOpen(false);
           handleEdit();
         } : undefined}
+        groups={groups}
       />
     </div>
   );

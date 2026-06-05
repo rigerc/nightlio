@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Target, Plus, ArrowRight, Calendar, CheckCircle } from 'lucide-react';
 import Skeleton from '../ui/Skeleton';
+import { Button } from '../ui/button';
 import apiService from '../../services/api';
 import AddGoalCard from './AddGoalCard';
 
@@ -179,14 +180,10 @@ const GoalsSection = ({ onNavigateToGoals }) => {
             </span>
             <p style={{ margin: 0, fontSize: '1rem', opacity: 0.9 }}>No goals yet.</p>
           </div>
-          <button
-            onClick={onNavigateToGoals}
-            className="primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
+          <Button onClick={onNavigateToGoals} className="gap-1.5">
             <Plus size={16} />
             Add First Goal
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="card-grid">

@@ -2,38 +2,22 @@ import { MOODS } from '../../utils/moodUtils';
 
 const MoodDisplay = ({ moodValue, size = 32, showLabel = true, children = null }) => {
   const mood = MOODS.find(m => m.value === moodValue);
-  const isIconOnly = !showLabel;
-  
   if (!mood) return null;
-  
+
   const IconComponent = mood.icon;
-  
+  const isIconOnly = !showLabel;
+
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: children ? 'space-between' : 'center',
-        gap: isIconOnly ? '0.85rem' : '1rem',
-        padding: isIconOnly ? '0.75rem 0.9rem' : '1rem',
-        background: 'var(--bg-card)',
-        borderRadius: '16px',
-        boxShadow: 'var(--shadow-lg)',
-      }}
+      className={`flex items-center bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm ${children ? 'justify-between' : 'justify-center'} ${isIconOnly ? 'gap-3 px-3.5 py-3' : 'gap-4 p-4'}`}
     >
       {children && (
-        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1 }}>
+        <div className="flex items-center min-w-0 flex-1">
           {children}
         </div>
       )}
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: showLabel ? '1rem' : 0,
-          flexShrink: 0,
-          marginLeft: children ? 'auto' : 0,
-        }}
+        className={`flex items-center shrink-0 ${showLabel ? 'gap-4' : 'gap-0'} ${children ? 'ml-auto' : ''}`}
       >
         <IconComponent
           size={isIconOnly ? Math.max(24, size - 2) : size}
@@ -41,13 +25,7 @@ const MoodDisplay = ({ moodValue, size = 32, showLabel = true, children = null }
           style={{ color: mood.color }}
         />
         {showLabel && (
-          <span
-            style={{
-              fontSize: '1.2rem',
-              fontWeight: '600',
-              color: mood.color,
-            }}
-          >
+          <span className="text-xl font-semibold" style={{ color: mood.color }}>
             Feeling {mood.label}
           </span>
         )}

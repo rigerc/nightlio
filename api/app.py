@@ -24,6 +24,7 @@ try:
     from api.routes.misc_routes import create_misc_routes
     from api.routes.config_routes import create_config_routes
     from api.routes.achievement_routes import create_achievement_routes
+    from api.routes.preferences_routes import create_preferences_routes
     from api.utils.error_handlers import setup_error_handlers
     from api.utils.security_headers import add_security_headers
 except Exception:  # fallback for running from inside api/
@@ -40,6 +41,7 @@ except Exception:  # fallback for running from inside api/
     from routes.misc_routes import create_misc_routes
     from routes.config_routes import create_config_routes
     from routes.achievement_routes import create_achievement_routes
+    from routes.preferences_routes import create_preferences_routes
     from utils.error_handlers import setup_error_handlers
     from utils.security_headers import add_security_headers
 
@@ -87,6 +89,12 @@ def create_app(config_name="default"):
     user_service = UserService(db)
     achievement_service = AchievementService(db)
 
+    try:
+        from api.services.preferences_service import PreferencesService
+    except ImportError:
+        from services.preferences_service import PreferencesService  # type: ignore
+    preferences_service = PreferencesService(db)
+
     # Register blueprints
     app.register_blueprint(create_auth_routes(user_service), url_prefix="/api")
     app.register_blueprint(create_mood_routes(mood_service), url_prefix="/api")
@@ -97,6 +105,7 @@ def create_app(config_name="default"):
     )
     app.register_blueprint(create_misc_routes(), url_prefix="/api")
     app.register_blueprint(create_config_routes(), url_prefix="/api")
+    app.register_blueprint(create_preferences_routes(preferences_service), url_prefix="/api")
 
     # Expose services for optional blueprints (e.g., OAuth) to reuse
     try:

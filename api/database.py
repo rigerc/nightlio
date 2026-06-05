@@ -16,6 +16,7 @@ try:  # pragma: no cover - fallback for script execution
     from .database_goals import GoalsMixin
     from .database_groups import GroupsMixin
     from .database_moods import MoodEntriesMixin
+    from .database_preferences import UserPreferencesMixin
     from .database_schema import DatabaseSchemaMixin
     from .database_users import UsersMixin
 except ImportError:  # pragma: no cover - executed when run as a script module
@@ -29,6 +30,7 @@ except ImportError:  # pragma: no cover - executed when run as a script module
     from database_goals import GoalsMixin  # type: ignore
     from database_groups import GroupsMixin  # type: ignore
     from database_moods import MoodEntriesMixin  # type: ignore
+    from database_preferences import UserPreferencesMixin  # type: ignore
     from database_schema import DatabaseSchemaMixin  # type: ignore
     from database_users import UsersMixin  # type: ignore
 
@@ -39,6 +41,7 @@ class MoodDatabase(
     GoalsMixin,
     MoodEntriesMixin,
     GroupsMixin,
+    UserPreferencesMixin,
     AchievementsMixin,
 ):
     """High-level facade composing all database-related mixins."""

@@ -2,6 +2,7 @@ import ReactMarkdown from 'react-markdown';
 import { useEffect } from 'react';
 import { Pencil, Trash2, FileDown } from 'lucide-react';
 import { exportEntryToMarkdown } from '../../utils/exportUtils';
+import { getIconComponent } from '../../utils/iconRegistry';
 
 const backdropStyle = {
   position: 'fixed',
@@ -154,9 +155,21 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting, onEdit, grou
         )}
         {entry.selections?.length > 0 && (
           <div className="tag-list" style={{ marginBottom: 12 }}>
-            {entry.selections.map((s) => (
-              <span key={s.id} className="tag">{s.name}</span>
-            ))}
+            {entry.selections.map((s) => {
+              const IconComp = s.icon ? getIconComponent(s.icon) : null;
+              const bg = s.group_color ? s.group_color + '18' : undefined;
+              const border = s.group_color ? s.group_color + '50' : undefined;
+              return (
+                <span
+                  key={s.id}
+                  className="tag"
+                  style={bg ? { backgroundColor: bg, borderColor: border, borderWidth: 1, borderStyle: 'solid' } : {}}
+                >
+                  {IconComp && <IconComp size={12} strokeWidth={1.5} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />}
+                  {s.name}
+                </span>
+              );
+            })}
           </div>
         )}
         <div className="history-markdown">

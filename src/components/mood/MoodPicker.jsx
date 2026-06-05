@@ -1,11 +1,14 @@
 import { MOODS } from '../../utils/moodUtils';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import './MoodPicker.css';
 
 const MoodPicker = ({ onMoodSelect }) => {
+  const { getMoodIconComponent } = usePreferences();
+
   return (
     <div className="mood-grid">
       {MOODS.map(mood => {
-        const IconComponent = mood.icon;
+        const IconComponent = getMoodIconComponent(mood.value);
         return (
           <button
             key={mood.value}

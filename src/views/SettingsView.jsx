@@ -1,4 +1,6 @@
 import { useConfig } from '../contexts/ConfigContext';
+import ActivityCustomizer from '../components/groups/ActivityCustomizer';
+import MoodIconCustomizer from '../components/settings/MoodIconCustomizer';
 
 const SettingsView = () => {
   const { config, loading } = useConfig();
@@ -14,6 +16,28 @@ const SettingsView = () => {
   return (
     <div className="text-left">
       <h2 className="mt-0 text-[var(--text)]">Settings</h2>
+
+      <section
+        className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]"
+        aria-label="Mood icon customization"
+      >
+        <h3 className="mt-0 mb-1 text-[var(--text)]">Mood Icons</h3>
+        <p className="mt-0 mb-0 text-[var(--text-muted)] text-sm">
+          Choose an alternative icon for each mood level.
+        </p>
+        <MoodIconCustomizer />
+      </section>
+
+      <section
+        className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]"
+        aria-label="Activity customization"
+      >
+        <h3 className="mt-0 mb-1 text-[var(--text)]">Activities &amp; Categories</h3>
+        <p className="mt-0 mb-0 text-[var(--text-muted)] text-sm">
+          Reorder, colorize, and add icons to your activity categories. Click a name to edit it.
+        </p>
+        <ActivityCustomizer />
+      </section>
 
       <section
         className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]"

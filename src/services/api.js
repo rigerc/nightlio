@@ -175,15 +175,61 @@ class ApiService {
     });
   }
 
+  async updateGroup(groupId, data) {
+    return this.request(`/api/groups/${groupId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteGroup(groupId) {
     return this.request(`/api/groups/${groupId}`, {
       method: 'DELETE',
     });
   }
 
+  async reorderGroups(orderedIds) {
+    return this.request('/api/groups/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ ordered_ids: orderedIds }),
+    });
+  }
+
+  async updateGroupOption(optionId, data) {
+    return this.request(`/api/options/${optionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteGroupOption(optionId) {
+    return this.request(`/api/options/${optionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async reorderGroupOptions(groupId, orderedIds) {
+    return this.request(`/api/groups/${groupId}/options/reorder`, {
+      method: 'POST',
+      body: JSON.stringify({ ordered_ids: orderedIds }),
+    });
+  }
+
   // Entry selections endpoint
   async getEntrySelections(entryId) {
     return this.request(`/api/mood/${entryId}/selections`);
+  }
+
+  // Preferences endpoints
+  async getMoodIconPreferences() {
+    return this.request('/api/preferences/mood-icons');
+  }
+
+  async saveMoodIconPreferences(icons) {
+    return this.request('/api/preferences/mood-icons', {
+      method: 'PUT',
+      body: JSON.stringify({ icons }),
+    });
   }
 
   // Achievement endpoints

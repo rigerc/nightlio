@@ -28,6 +28,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 self._create_group_options_table(conn)
                 self._create_entry_selections_table(conn)
                 self._create_achievements_table(conn)
+                self._create_user_preferences_table(conn)
 
                 # Goals and metrics
                 self._create_goals_table(conn)
@@ -41,6 +42,8 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 logger.info("Database initialization complete")
 
             self._insert_default_groups()
+            self._migrate_groups_schema()
+            self._migrate_group_options_schema()
         except Exception as exc:  # pragma: no cover - initialization rarely fails
             logger.error("Database initialization failed: %s", exc)
             raise
@@ -201,6 +204,49 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             logger.warning(
                 "Goal completions table creation failed (non-critical): %s", exc
             )
+
+    def _create_user_preferences_table(self, conn: sqlite3.Connection) -> None:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_preferences (
+                user_id   INTEGER PRIMARY KEY,
+                mood_icons TEXT DEFAULT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+            """
+        )
+        logger.info("User preferences table ready")
+
+    def _migrate_groups_schema(self) -> None:
+        try:
+            with self._connect() as conn:
+                cur = conn.execute("PRAGMA table_info(groups)")
+                cols = {row[1] for row in cur.fetchall()}
+                if "color" not in cols:
+                    conn.execute("ALTER TABLE groups ADD COLUMN color TEXT DEFAULT NULL")
+                if "icon" not in cols:
+                    conn.execute("ALTER TABLE groups ADD COLUMN icon TEXT DEFAULT NULL")
+                if "sort_order" not in cols:
+                    conn.execute("ALTER TABLE groups ADD COLUMN sort_order INTEGER DEFAULT 0")
+                conn.commit()
+                logger.info("Groups table schema migration complete")
+        except sqlite3.Error as exc:
+            logger.warning("Groups schema migration failed (non-critical): %s", exc)
+
+    def _migrate_group_options_schema(self) -> None:
+        try:
+            with self._connect() as conn:
+                cur = conn.execute("PRAGMA table_info(group_options)")
+                cols = {row[1] for row in cur.fetchall()}
+                if "icon" not in cols:
+                    conn.execute("ALTER TABLE group_options ADD COLUMN icon TEXT DEFAULT NULL")
+                if "sort_order" not in cols:
+                    conn.execute("ALTER TABLE group_options ADD COLUMN sort_order INTEGER DEFAULT 0")
+                conn.commit()
+                logger.info("Group options table schema migration complete")
+        except sqlite3.Error as exc:
+            logger.warning("Group options schema migration failed (non-critical): %s", exc)
 
     def _create_user_metrics_table(self, conn: sqlite3.Connection) -> None:
         try:

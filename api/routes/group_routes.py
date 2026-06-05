@@ -10,59 +10,51 @@ def create_group_routes(group_service: GroupService):
         try:
             groups = group_service.get_all_groups()
             return jsonify(groups)
-
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
     @group_bp.route("/groups", methods=["POST"])
     def create_group():
         try:
-            data = request.json
+            data = request.json or {}
             name = data.get("name")
-
             if not name:
                 return jsonify({"error": "Group name is required"}), 400
-
             group_id = group_service.create_group(name)
-
-            return (
-                jsonify(
-                    {
-                        "status": "success",
-                        "group_id": group_id,
-                        "message": "Group created successfully",
-                    }
-                ),
-                201,
-            )
-
+            return jsonify({"status": "success", "group_id": group_id, "message": "Group created successfully"}), 201
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    @group_bp.route("/groups/<int:group_id>/options", methods=["POST"])
-    def create_group_option(group_id):
+    @group_bp.route("/groups/reorder", methods=["POST"])
+    def reorder_groups():
         try:
-            data = request.json
-            name = data.get("name")
+            data = request.json or {}
+            ordered_ids = data.get("ordered_ids")
+            if not isinstance(ordered_ids, list):
+                return jsonify({"error": "ordered_ids must be an array"}), 400
+            ordered_ids = [int(i) for i in ordered_ids]
+            group_service.reorder_groups(ordered_ids)
+            return jsonify({"status": "success"})
+        except (TypeError, ValueError) as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
-            if not name:
-                return jsonify({"error": "Option name is required"}), 400
-
-            option_id = group_service.create_group_option(group_id, name)
-
-            return (
-                jsonify(
-                    {
-                        "status": "success",
-                        "option_id": option_id,
-                        "message": "Option created successfully",
-                    }
-                ),
-                201,
-            )
-
+    @group_bp.route("/groups/<int:group_id>", methods=["PATCH"])
+    def update_group(group_id):
+        try:
+            data = request.json or {}
+            allowed = {"name", "color", "icon", "sort_order"}
+            kwargs = {k: v for k, v in data.items() if k in allowed}
+            if not kwargs:
+                return jsonify({"error": "No valid fields to update"}), 400
+            success = group_service.update_group(group_id, **kwargs)
+            if success:
+                return jsonify({"status": "success", "message": "Group updated successfully"})
+            else:
+                return jsonify({"error": "Group not found"}), 404
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
         except Exception as e:
@@ -72,14 +64,57 @@ def create_group_routes(group_service: GroupService):
     def delete_group(group_id):
         try:
             success = group_service.delete_group(group_id)
-
             if success:
-                return jsonify(
-                    {"status": "success", "message": "Group deleted successfully"}
-                )
+                return jsonify({"status": "success", "message": "Group deleted successfully"})
             else:
                 return jsonify({"error": "Group not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
+    @group_bp.route("/groups/<int:group_id>/options", methods=["POST"])
+    def create_group_option(group_id):
+        try:
+            data = request.json or {}
+            name = data.get("name")
+            if not name:
+                return jsonify({"error": "Option name is required"}), 400
+            option_id = group_service.create_group_option(group_id, name)
+            return jsonify({"status": "success", "option_id": option_id, "message": "Option created successfully"}), 201
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @group_bp.route("/groups/<int:group_id>/options/reorder", methods=["POST"])
+    def reorder_group_options(group_id):
+        try:
+            data = request.json or {}
+            ordered_ids = data.get("ordered_ids")
+            if not isinstance(ordered_ids, list):
+                return jsonify({"error": "ordered_ids must be an array"}), 400
+            ordered_ids = [int(i) for i in ordered_ids]
+            group_service.reorder_group_options(group_id, ordered_ids)
+            return jsonify({"status": "success"})
+        except (TypeError, ValueError) as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @group_bp.route("/options/<int:option_id>", methods=["PATCH"])
+    def update_option(option_id):
+        try:
+            data = request.json or {}
+            allowed = {"name", "icon", "sort_order"}
+            kwargs = {k: v for k, v in data.items() if k in allowed}
+            if not kwargs:
+                return jsonify({"error": "No valid fields to update"}), 400
+            success = group_service.update_group_option(option_id, **kwargs)
+            if success:
+                return jsonify({"status": "success", "message": "Option updated successfully"})
+            else:
+                return jsonify({"error": "Option not found"}), 404
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
@@ -87,14 +122,10 @@ def create_group_routes(group_service: GroupService):
     def delete_option(option_id):
         try:
             success = group_service.delete_group_option(option_id)
-
             if success:
-                return jsonify(
-                    {"status": "success", "message": "Option deleted successfully"}
-                )
+                return jsonify({"status": "success", "message": "Option deleted successfully"})
             else:
                 return jsonify({"error": "Option not found"}), 404
-
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 

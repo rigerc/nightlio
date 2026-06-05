@@ -1,8 +1,7 @@
 import ReactMarkdown from 'react-markdown';
-import { useEffect, useState } from 'react';
-import { Pencil, Trash2, Download } from 'lucide-react';
-import apiService from '../../services/api';
-import { getMoodLabel } from '../../utils/moodUtils';
+import { useEffect } from 'react';
+import { Pencil, Trash2, FileDown } from 'lucide-react';
+import { exportEntryToMarkdown } from '../../utils/exportUtils';
 
 const backdropStyle = {
   position: 'fixed',
@@ -30,27 +29,21 @@ const deriveTitleBody = (content = '') => {
   if (!text) return { title: '', body: '' };
   const lines = text.split('\n');
   const first = (lines[0] || '').trim();
-  // If first line is a markdown heading like # Title
   const heading = first.match(/^#{1,6}\s+(.+?)\s*$/);
   if (heading) {
     return { title: heading[1].trim(), body: lines.slice(1).join('\n').trim() };
   }
-  // Otherwise, multi-line: first line as title, remainder as body
   if (lines.length > 1) {
     return { title: first, body: lines.slice(1).join('\n').trim() };
   }
-  // Single-line content; split at first space into title + body
   const idx = first.indexOf(' ');
   if (idx > 0) {
     return { title: first.slice(0, idx).trim(), body: first.slice(idx + 1).trim() };
   }
-  // Single word only
   return { title: first, body: '' };
 };
 
-const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting, onEdit }) => {
-  const [isExporting, setIsExporting] = useState(false);
-
+const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting, onEdit, groups = [] }) => {
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e) => {
@@ -62,53 +55,16 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting, onEdit }) =>
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isOpen, onClose]);
-  
+
   if (!isOpen || !entry) return null;
-  
+
   const onBackdrop = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
 
-  const handleExport = async (e) => {
+  const handleExportMarkdown = (e) => {
     e.stopPropagation();
-    if (isExporting) return;
-    setIsExporting(true);
-    try {
-      const timeStr = entry.created_at ? new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-      const dateStr = `${entry.date}${timeStr ? ` at ${timeStr}` : ''}`;
-      
-      const moodLabel = entry.mood ? getMoodLabel(entry.mood) : '';
-      
-      const tagsStr = entry.selections?.length > 0 
-        ? entry.selections.map(s => s.name).join(', ') 
-        : '';
-    
-      const headerLines = [];
-      headerLines.push(`**Date:** ${dateStr}`);
-      if (moodLabel) {
-        headerLines.push(`**Mood:** ${moodLabel}`);
-      }
-      if (tagsStr) {
-        headerLines.push(`**Tags:** ${tagsStr}`);
-      }
-    
-      const enhancedContent = headerLines.join('\n') + '\n\n---\n\n' + (entry.content || '');
-
-      const blob = await apiService.exportPdf(enhancedContent);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Entry_${entry.date || 'Export'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error("Export error:", err);
-      alert("Failed to export PDF.");
-    } finally {
-      setIsExporting(false);
-    }
+    exportEntryToMarkdown(entry, groups);
   };
 
   const { title, body } = deriveTitleBody(entry.content);
@@ -126,8 +82,7 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting, onEdit }) =>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={handleExport}
-              disabled={isExporting}
+              onClick={handleExportMarkdown}
               style={{
                 background: 'var(--surface)',
                 color: 'var(--text)',
@@ -139,13 +94,12 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting, onEdit }) =>
                 justifyContent: 'center',
                 fontWeight: 600,
                 boxShadow: 'var(--shadow-sm)',
-                opacity: isExporting ? 0.5 : 1,
-                cursor: isExporting ? 'not-allowed' : 'pointer',
+                cursor: 'pointer',
               }}
-              title="Export as PDF"
-              aria-label="Export as PDF"
+              title="Export as Markdown"
+              aria-label="Export as Markdown"
             >
-              <Download size={18} />
+              <FileDown size={18} />
             </button>
             {onEdit && (
               <button

@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import LoginPage from "./components/auth/LoginPage";
 import NotFound from "./views/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
-import { ConfigProvider, useConfig } from "./contexts/ConfigContext";
+import { ConfigProvider } from "./contexts/ConfigContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { BurnerProvider } from "./contexts/BurnerContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -25,15 +25,7 @@ import AboutPage from "./views/AboutPage";
 import { useMoodData } from "./hooks/useMoodData";
 import { useGroups } from "./hooks/useGroups";
 import { useStatistics } from "./hooks/useStatistics";
-import MusicDock from './components/mood/MusicDock'
 import "./App.css";
-
-const MusicDockGate = () => {
-  const { config } = useConfig();
-
-  if (!config.enable_mood_music) return null;
-  return <MusicDock />;
-};
 
 const AppContent = () => {
   const navigate = useNavigate();
@@ -146,12 +138,12 @@ const AppContent = () => {
 
   return (
     <>
-      <div className={`app-page ${isEntryView ? 'no-sidebar' : ''}`}>
-        <Sidebar
-          onLoadStatistics={loadStatistics}
-        />
-        
-        <div className="app-shell">
+      <div className="min-h-screen">
+        {/* Sidebar — hidden on mobile, visible md+ */}
+        {!isEntryView && <Sidebar onLoadStatistics={loadStatistics} />}
+
+        {/* Main content shell — offset by sidebar width on md+ */}
+        <div className={`flex flex-col min-h-screen ${!isEntryView ? 'md:ml-[280px]' : ''}`}>
           <Header
             currentStreak={currentStreak}
             pastEntries={pastEntries}
@@ -159,9 +151,8 @@ const AppContent = () => {
             showSearch={!isEntryView}
           />
 
-          <div className="app-layout">
-
-            <main className="app-main">
+          <div className="flex-1">
+            <main className="relative bg-[color-mix(in_oklab,var(--surface)_10%,transparent)] backdrop-blur-xl rounded-xl border border-[var(--border)] shadow-sm p-6 m-6 mb-0 overflow-auto max-md:m-0 max-md:rounded-none max-md:border-x-0 max-md:shadow-none max-md:p-4">
               <Routes>
                 <Route index element={
                   <HistoryView
@@ -201,23 +192,24 @@ const AppContent = () => {
                 <Route path="settings" element={<SettingsView />} />
               </Routes>
             </main>
-            
+
             <Routes>
               <Route index element={
                 <>
-                  <section className="app-wide" aria-label="Goals section">
+                  <section className="mx-6 mt-6 max-md:mx-4 max-md:mt-6" aria-label="Goals section">
                     <GoalsSection onNavigateToGoals={() => navigate('goals')} />
                   </section>
-                  <section className="app-wide" aria-label="History entries" id="history-section">
-                    <h2 style={{ margin: '0 0 var(--space-1) 0', paddingLeft: 'calc(var(--space-1) / 2)', paddingTop: 0, paddingBottom: 'calc(var(--space-1) / 2)', color: 'var(--text)' }}>
+                  <section className="mx-6 mt-6 pb-6 max-md:mx-4 max-md:pb-24" aria-label="History entries" id="history-section">
+                    <h2 className="m-0 mb-2 pl-1 text-[var(--text)]">
                       {searchResults !== null ? `Search Results (${searchResults.length})` : 'History'}
                     </h2>
-                    <HistoryList 
+                    <HistoryList
                       entries={displayEntries}
                       loading={historyLoading}
                       error={historyError}
                       onDelete={handleEntryDeleted}
                       onEdit={handleStartEdit}
+                      groups={groups}
                     />
                   </section>
                 </>
@@ -227,9 +219,7 @@ const AppContent = () => {
         </div>
       </div>
 
-      <BottomNav
-        onLoadStatistics={loadStatistics}
-      />
+      <BottomNav onLoadStatistics={loadStatistics} />
 
       <FAB
         onClick={() => {
@@ -241,7 +231,6 @@ const AppContent = () => {
         }}
         label="Scroll to top"
       />
-      <MusicDockGate />
     </>
   );
 };

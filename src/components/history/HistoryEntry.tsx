@@ -87,7 +87,6 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
         border: isHovered ? '1px solid color-mix(in oklab, var(--accent-600), transparent 55%)' : '1px solid var(--border)',
         boxShadow: isHovered ? 'var(--shadow-md)' : 'var(--shadow-sm)',
         cursor: 'pointer',
-        outline: 'none',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>

@@ -80,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [token, configLoading, config.enable_google_oauth, verifyToken, localLogin]);
 
-  const login = async (googleToken: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (googleToken: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
       const response = await apiService.googleAuth(googleToken);
@@ -95,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>

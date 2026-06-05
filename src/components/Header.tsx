@@ -124,8 +124,8 @@ const Header = ({ currentStreak, pastEntries, onSearch, showSearch = true }: Hea
               <span className="text-sm font-medium hidden sm:inline">{user.name}</span>
             </div>
 
-            <button type="button" onClick={logout} className={iconBtnBase}>
-              <LogOut size={14} />
+            <button type="button" onClick={logout} className={iconBtnBase} aria-label="Log out">
+              <LogOut size={14} aria-hidden="true" />
               <span className="hidden sm:inline">Logout</span>
             </button>
           </div>

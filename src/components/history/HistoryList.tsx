@@ -48,7 +48,7 @@ const HistoryList = ({ entries, loading, error, onDelete, onEdit, groups = [] }:
         <AddEntryCard />
         {entries.map(entry => (
           <HistoryEntry
-            key={entry.id || entry.date}
+            key={entry.id}
             entry={entry}
             onDelete={onDelete}
             onEdit={onEdit}

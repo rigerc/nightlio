@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import apiService from '../services/api';
 import type { Entry } from '../types';
@@ -16,7 +16,7 @@ export const useMoodData = (): UseMoodDataReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadHistory = async (): Promise<void> => {
+  const loadHistory = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -39,11 +39,11 @@ export const useMoodData = (): UseMoodDataReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadHistory();
-  }, []);
+  }, [loadHistory]);
 
   return { pastEntries, setPastEntries, loading, error, refreshHistory: loadHistory };
 };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import LoginPage from "./components/auth/LoginPage";
 import NotFound from "./views/NotFound";
@@ -88,13 +88,13 @@ const AppContent = () => {
   const displayEntries = searchResults !== null ? searchResults : pastEntries;
   const isEntryView = location.pathname.endsWith('/entry');
 
-  const handleGlobalSearch = (results: Entry[] | null) => {
+  const handleGlobalSearch = useCallback((results: Entry[] | null) => {
     setSearchResults(results);
     if (results !== null) {
       if (location.pathname !== '/dashboard' && location.pathname !== '/dashboard/') {
         navigate('/dashboard');
       }
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         const historySection = document.getElementById('history-section');
         if (historySection) {
           const headerOffset = 80;
@@ -102,9 +102,9 @@ const AppContent = () => {
           const offsetPosition = elementPosition + window.scrollY - headerOffset;
           window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
         }
-      }, 50);
+      });
     }
-  };
+  }, [navigate, location.pathname]);
 
   useEffect(() => {
     const handler = () => {

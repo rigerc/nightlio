@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import MoodPicker from '../components/mood/MoodPicker';
 import HistoryList from '../components/history/HistoryList';
 import type { Entry, Group, MoodValue } from '../types';
@@ -15,11 +14,6 @@ interface HistoryViewProps {
 }
 
 const HistoryView = ({ pastEntries, loading, error, onMoodSelect, onDelete, onEdit, renderOnlyHeader = false, groups = [] }: HistoryViewProps) => {
-  const [filteredEntries, setFilteredEntries] = useState<Entry[]>(pastEntries);
-
-  useEffect(() => {
-    setFilteredEntries(pastEntries);
-  }, [pastEntries]);
 
   const currentDate = new Date();
   const dateString = currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -40,7 +34,7 @@ const HistoryView = ({ pastEntries, loading, error, onMoodSelect, onDelete, onEd
 
       {renderOnlyHeader ? null : (
         <HistoryList
-          entries={filteredEntries}
+          entries={pastEntries}
           loading={loading}
           error={error}
           onDelete={onDelete}

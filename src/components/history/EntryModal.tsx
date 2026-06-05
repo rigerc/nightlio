@@ -63,11 +63,11 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
   const { title, body } = deriveTitleBody(entry.content);
 
   return (
-    <div style={backdropStyle} onClick={onBackdrop} role="dialog" aria-modal="true">
+    <div style={backdropStyle} onClick={onBackdrop} role="dialog" aria-modal="true" aria-labelledby="entry-modal-title">
       <div style={panelStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 600, color: 'var(--text)' }}>{entry.date}</div>
+            <div id="entry-modal-title" style={{ fontWeight: 600, color: 'var(--text)' }}>{entry.date}</div>
             {entry.created_at && (
               <div style={{ fontSize: '0.85rem', color: 'color-mix(in oklab, var(--text), transparent 30%)' }}>
                 {new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

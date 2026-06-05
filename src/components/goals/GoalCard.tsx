@@ -26,11 +26,9 @@ const GoalCard = ({ goal, onDelete, onUpdateProgress }: GoalCardProps) => {
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this goal?')) return;
     setIsDeleting(true);
-    setTimeout(() => {
-      onDelete(goal.id);
-      show('Goal deleted successfully', 'success');
-      setIsDeleting(false);
-    }, 500);
+    onDelete(goal.id);
+    show('Goal deleted successfully', 'success');
+    setIsDeleting(false);
   };
 
   const handleMarkComplete = () => {
@@ -57,7 +55,7 @@ const GoalCard = ({ goal, onDelete, onUpdateProgress }: GoalCardProps) => {
     show('Progress updated!', 'success');
   };
 
-  const progressPercentage = (goal.completed / goal.total) * 100;
+  const progressPercentage = goal.total > 0 ? (goal.completed / goal.total) * 100 : 0;
   const isCompleted = goal.completed >= goal.total;
   const isDoneToday = (() => {
     const d = new Date();

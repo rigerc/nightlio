@@ -17,65 +17,56 @@ export default function SearchBar({
   searchFields = ['content', 'date'],
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
     if (!query.trim()) {
-      setIsOpen(false);
       onSearch(null);
       return;
     }
 
-    const queryLower = query.toLowerCase();
-    const filtered = entries.filter(entry =>
-      searchFields.some(field => {
-        const value = entry[field];
-        if (!value) return false;
-        return String(value).toLowerCase().includes(queryLower);
-      })
-    );
+    debounceRef.current = setTimeout(() => {
+      const queryLower = query.toLowerCase();
+      const filtered = entries.filter(entry =>
+        searchFields.some(field => {
+          const value = entry[field];
+          if (!value) return false;
+          return String(value).toLowerCase().includes(queryLower);
+        })
+      );
+      onSearch(filtered);
+    }, 150);
 
-    setIsOpen(true);
-    onSearch(filtered);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [query, entries, searchFields, onSearch]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
-    <div className="search-bar-container" ref={searchRef}>
+    <div className="search-bar-container">
       <div className="search-bar-input-wrapper">
         <Search size={18} className="search-bar-icon" />
         <input
+          id="global-search-input"
           type="text"
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => query && setIsOpen(true)}
           className="search-bar-input"
+          aria-label="Search journal entries"
         />
         {query && (
           <button
             className="search-bar-clear"
-            onClick={() => {
-              setQuery('');
-              setIsOpen(false);
-            }}
+            onClick={() => setQuery('')}
+            aria-label="Clear search"
           >
             <X size={18} />
           </button>
         )}
       </div>
-      {isOpen && <div style={{ display: 'none' }} />}
     </div>
   );
 }

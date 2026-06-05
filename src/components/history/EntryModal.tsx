@@ -52,6 +52,7 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
   if (!isOpen || !entry) return null;
 
   const onBackdrop = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (e.target === e.currentTarget) onClose();
   };
 
@@ -64,7 +65,7 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
 
   return (
     <div style={backdropStyle} onClick={onBackdrop} role="dialog" aria-modal="true" aria-labelledby="entry-modal-title">
-      <div style={panelStyle}>
+      <div style={panelStyle} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
           <div style={{ minWidth: 0 }}>
             <div id="entry-modal-title" style={{ fontWeight: 600, color: 'var(--text)' }}>{entry.date}</div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getMoodIcon } from '../../utils/moodUtils';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { getIconComponent } from '../../utils/iconRegistry';
@@ -44,6 +44,7 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
   const [isDeleting, setIsDeleting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [open, setOpen] = useState(false);
+  const modalHistoryPushed = useRef(false);
 
   const { title: rawTitle, body: rawBody } = splitTitleBody(entry.content || '');
   const title = stripMd(rawTitle).slice(0, 80);
@@ -68,7 +69,37 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
     }
   };
 
-  const openPreview = () => setOpen(true);
+  const openPreview = () => {
+    if (open) return;
+    const currentState = typeof window.history.state === 'object' && window.history.state !== null
+      ? window.history.state
+      : {};
+    window.history.pushState({ ...currentState, waymarkEntryModal: entry.id }, '', window.location.href);
+    modalHistoryPushed.current = true;
+    setOpen(true);
+  };
+
+  const closePreview = () => {
+    if (modalHistoryPushed.current && window.history.state?.waymarkEntryModal === entry.id) {
+      modalHistoryPushed.current = false;
+      setOpen(false);
+      window.history.back();
+      return;
+    }
+    modalHistoryPushed.current = false;
+    setOpen(false);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onPopState = () => {
+      modalHistoryPushed.current = false;
+      setOpen(false);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [open]);
+
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPreview(); }
   };
@@ -134,13 +165,13 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
       <EntryModal
         isOpen={open}
         entry={entry}
-        onClose={() => setOpen(false)}
+        onClose={closePreview}
         onDelete={async () => {
           const ok = await handleDelete();
-          if (ok) setOpen(false);
+          if (ok) closePreview();
         }}
         isDeleting={isDeleting}
-        onEdit={onEdit ? () => { setOpen(false); onEdit(entry); } : undefined}
+        onEdit={onEdit ? () => { closePreview(); onEdit(entry); } : undefined}
         groups={groups}
       />
     </div>

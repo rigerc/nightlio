@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
-import { ChevronDown, ChevronRight, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import type { CSSProperties, DragEvent } from 'react';
+import { ChevronUp, GripVertical, Palette, Plus, Trash2 } from 'lucide-react';
 import { useGroups } from '../../hooks/useGroups';
 import { getIconComponent } from '../../utils/iconRegistry';
 import IconPicker from '../ui/IconPicker';
@@ -11,6 +11,15 @@ import type { Group, GroupOption } from '../../types';
 
 const inputClass =
   'px-2.5 py-1.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--surface)] text-[var(--text)] outline-none focus:border-[var(--accent-600)] focus:ring-1 focus:ring-[var(--accent-600)]/20 transition-colors';
+
+const reorderIds = (ids: number[], draggedId: number, targetId: number) => {
+  if (draggedId === targetId) return ids;
+  const next = ids.filter(id => id !== draggedId);
+  const targetIndex = next.indexOf(targetId);
+  if (targetIndex === -1) return ids;
+  next.splice(targetIndex, 0, draggedId);
+  return next;
+};
 
 interface EditableNameProps {
   value: string;
@@ -55,45 +64,59 @@ const EditableName = ({ value, onSave, className = '', style }: EditableNameProp
   );
 };
 
-interface OptionRowProps {
+interface ActivityChipProps {
   option: GroupOption;
-  groupId: number;
-  isFirst: boolean;
-  isLast: boolean;
+  isDragging: boolean;
   onUpdate: (id: number, updates: Partial<GroupOption>) => void;
   onDelete: (id: number) => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  onDragStart: (id: number) => void;
+  onDropOn: (id: number) => void;
 }
 
-const OptionRow = ({ option, isFirst, isLast, onUpdate, onDelete, onMoveUp, onMoveDown }: OptionRowProps) => {
+const ActivityChip = ({ option, isDragging, onUpdate, onDelete, onDragStart, onDropOn }: ActivityChipProps) => {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const IconComp = option.icon ? getIconComponent(option.icon) : null;
 
+  const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(option.id));
+    onDragStart(option.id);
+  };
+
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--bg)] group">
-        <div className="flex flex-col gap-0.5 shrink-0">
-          <button onClick={onMoveUp} disabled={isFirst} className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronUp size={12} /></button>
-          <button onClick={onMoveDown} disabled={isLast} className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronDown size={12} /></button>
-        </div>
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragOver={event => { event.preventDefault(); event.stopPropagation(); }}
+      onDrop={event => { event.preventDefault(); event.stopPropagation(); onDropOn(option.id); }}
+      className={cn(
+        'group/activity relative inline-flex min-w-[180px] max-w-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-sm transition-all hover:-translate-y-px hover:border-[color-mix(in_oklab,var(--accent-600),transparent_55%)] hover:bg-[var(--bg)]',
+        isDragging && 'opacity-45 ring-2 ring-[var(--accent-600)]'
+      )}
+    >
+      <div className="flex items-center gap-1.5">
+        <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-[var(--text-muted)] active:cursor-grabbing" aria-hidden="true" />
         <button
+          type="button"
           onClick={() => setShowIconPicker(p => !p)}
           title={option.icon ? `Icon: ${option.icon}` : 'Add icon'}
-          className={cn('shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center border border-[var(--border)] transition-colors', showIconPicker ? 'bg-[var(--bg)] text-[var(--text)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg)] hover:text-[var(--text)]')}
+          className={cn('shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border border-[var(--border)] transition-colors', showIconPicker ? 'bg-[var(--bg)] text-[var(--text)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg)] hover:text-[var(--text)]')}
         >
-          {IconComp ? <IconComp className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={1.75} /> : <Plus className="w-5 h-5 sm:w-6 sm:h-6" />}
+          {IconComp ? <IconComp className="w-6 h-6" strokeWidth={1.75} /> : <Plus className="w-5 h-5" />}
         </button>
-        <EditableName value={option.name} onSave={name => onUpdate(option.id, { name })} className="flex-1 text-sm" />
+        <EditableName value={option.name} onSave={name => onUpdate(option.id, { name })} className="min-w-0 flex-1 truncate text-sm" />
         <button
+          type="button"
           onClick={() => { if (window.confirm(`Delete activity "${option.name}"? Existing entries that reference it will lose this tag.`)) onDelete(option.id); }}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded text-[var(--text-muted)] hover:text-red-500 transition-all"
+          className="shrink-0 rounded-lg p-1 text-[var(--text-muted)] opacity-70 transition-all hover:bg-red-500/10 hover:text-red-500 group-hover/activity:opacity-100"
+          aria-label={`Delete ${option.name}`}
         >
-          <Trash2 size={13} />
+          <Trash2 size={14} />
         </button>
       </div>
       {showIconPicker && (
-        <div className="ml-10 mb-1">
+        <div className="mt-2" onDragStart={event => event.stopPropagation()}>
           <IconPicker value={option.icon ?? null} onChange={iconName => { onUpdate(option.id, { icon: iconName ?? undefined }); setShowIconPicker(false); }} />
         </div>
       )}
@@ -103,25 +126,25 @@ const OptionRow = ({ option, isFirst, isLast, onUpdate, onDelete, onMoveUp, onMo
 
 interface GroupCardProps {
   group: Group;
-  isFirst: boolean;
-  isLast: boolean;
+  isDragging: boolean;
   onUpdate: (id: number, updates: Partial<Group>) => void;
   onDelete: (id: number) => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  onDragStart: (id: number) => void;
+  onDropOn: (id: number) => void;
   onUpdateOption: (id: number, updates: Partial<GroupOption>) => void;
   onDeleteOption: (id: number) => void;
   onReorderOptions: (groupId: number, ids: number[]) => void;
   onAddOption: (groupId: number, name: string) => Promise<boolean>;
 }
 
-const GroupCard = ({ group, isFirst, isLast, onUpdate, onDelete, onMoveUp, onMoveDown, onUpdateOption, onDeleteOption, onReorderOptions, onAddOption }: GroupCardProps) => {
-  const [expanded, setExpanded] = useState(false);
+const GroupCard = ({ group, isDragging, onUpdate, onDelete, onDragStart, onDropOn, onUpdateOption, onDeleteOption, onReorderOptions, onAddOption }: GroupCardProps) => {
+  const [expanded, setExpanded] = useState(true);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [addingOption, setAddingOption] = useState(false);
   const [newOptionName, setNewOptionName] = useState('');
   const [savingOption, setSavingOption] = useState(false);
+  const [draggingOptionId, setDraggingOptionId] = useState<number | null>(null);
 
   const GroupIconComp = group.icon ? getIconComponent(group.icon) : null;
   const accentColor = group.color ?? null;
@@ -134,80 +157,102 @@ const GroupCard = ({ group, isFirst, isLast, onUpdate, onDelete, onMoveUp, onMov
     setSavingOption(false);
   };
 
-  const moveOption = (index: number, direction: number) => {
-    const ids = group.options.map(o => o.id);
-    const newIds = [...ids];
-    const target = index + direction;
-    if (target < 0 || target >= newIds.length) return;
-    [newIds[index], newIds[target]] = [newIds[target], newIds[index]];
-    onReorderOptions(group.id, newIds);
+  const handleGroupDragStart = (event: DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(group.id));
+    onDragStart(group.id);
+  };
+
+  const dropOption = (targetId: number) => {
+    if (!draggingOptionId) return;
+    const nextIds = reorderIds(group.options.map(option => option.id), draggingOptionId, targetId);
+    onReorderOptions(group.id, nextIds);
+    setDraggingOptionId(null);
   };
 
   return (
-    <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)] shadow-sm">
-      <div className="flex items-center gap-2 p-3">
-        <div className="flex flex-col gap-0.5 shrink-0">
-          <button onClick={onMoveUp} disabled={isFirst} className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronUp size={14} /></button>
-          <button onClick={onMoveDown} disabled={isLast} className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronDown size={14} /></button>
-        </div>
+    <div
+      draggable
+      onDragStart={handleGroupDragStart}
+      onDragOver={event => event.preventDefault()}
+      onDrop={event => { event.preventDefault(); onDropOn(group.id); }}
+      onDragEnd={() => onDropOn(group.id)}
+      className={cn(
+        'rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm transition-all',
+        isDragging && 'opacity-50 ring-2 ring-[var(--accent-600)]'
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <GripVertical className="h-5 w-5 shrink-0 cursor-grab text-[var(--text-muted)] active:cursor-grabbing" aria-hidden="true" />
         <button
+          type="button"
           onClick={() => { setShowIconPicker(p => !p); setShowColorPicker(false); }}
           title={group.icon ? `Icon: ${group.icon}` : 'Set group icon'}
-          className={cn('shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center border-2 border-[var(--border)] transition-colors', showIconPicker ? 'bg-[var(--bg)]' : 'hover:bg-[var(--bg)]')}
+          className={cn('mr-0.5 shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border border-[var(--border)] transition-colors', showIconPicker ? 'bg-[var(--bg)]' : 'hover:bg-[var(--bg)]')}
         >
-          {GroupIconComp ? <GroupIconComp className="w-7 h-7 sm:w-8 sm:h-8 text-[var(--text-muted)]" strokeWidth={1.75} /> : <Plus className="w-6 h-6 sm:w-7 sm:h-7 text-[var(--text-muted)]" />}
+          {GroupIconComp ? <GroupIconComp className="w-6 h-6 text-[var(--text-muted)]" strokeWidth={1.75} /> : <Plus className="w-5 h-5 text-[var(--text-muted)]" />}
         </button>
-        <EditableName value={group.name} onSave={name => onUpdate(group.id, { name })} className="flex-1 text-base" style={accentColor ? { color: accentColor } : undefined} />
+        <EditableName value={group.name} onSave={name => onUpdate(group.id, { name })} className="min-w-[8rem] flex-1 text-base" style={accentColor ? { color: accentColor } : undefined} />
         <button
+          type="button"
           onClick={() => { setShowColorPicker(p => !p); setShowIconPicker(false); }}
           title="Set group color"
-          className={cn('shrink-0 w-6 h-6 rounded-full border-2 transition-all', showColorPicker ? 'border-[var(--text)] scale-110' : 'border-[var(--border)] hover:scale-105')}
-          style={{ backgroundColor: accentColor ?? 'var(--border)' }}
-        />
-        <button onClick={() => setExpanded(p => !p)} className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors shrink-0">
-          <span>{group.options.length} {group.options.length === 1 ? 'activity' : 'activities'}</span>
-          {expanded ? <ChevronUp size={14} /> : <ChevronRight size={14} />}
+          className={cn('inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text)] transition-all hover:bg-[var(--bg)]', showColorPicker && 'ring-2 ring-[var(--accent-600)] ring-offset-1')}
+        >
+          <span className="h-4 w-4 rounded-full border border-[var(--border)]" style={{ backgroundColor: accentColor ?? 'var(--border-soft)' }} />
+          <Palette size={14} />
+          <span className="max-sm:hidden">Color</span>
         </button>
         <button
-          onClick={() => { if (window.confirm(`Delete category "${group.name}" and all its activities? This cannot be undone.`)) onDelete(group.id); }}
-          className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 transition-colors shrink-0"
+          type="button"
+          onClick={() => setExpanded(p => !p)}
+          className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg)] hover:text-[var(--text)]"
         >
-          <Trash2 size={15} />
+          <span>{group.options.length} {group.options.length === 1 ? 'activity' : 'activities'}</span>
+          <ChevronUp size={14} className={cn('transition-transform', !expanded && 'rotate-180')} />
+        </button>
+        <button
+          type="button"
+          onClick={() => { if (window.confirm(`Delete category "${group.name}" and all its activities? This cannot be undone.`)) onDelete(group.id); }}
+          className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-500"
+          aria-label={`Delete ${group.name}`}
+        >
+          <Trash2 size={16} />
         </button>
       </div>
 
       {showColorPicker && (
-        <div className="px-3 pb-3 border-t border-[var(--border)] pt-2">
-          <p className="text-xs text-[var(--text-muted)] mb-2">Badge color</p>
+        <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3" onDragStart={event => event.stopPropagation()}>
+          <p className="m-0 mb-2 text-xs font-medium text-[var(--text-muted)]">Group color</p>
           <ColorPicker value={accentColor} nullable onChange={color => { onUpdate(group.id, { color: color ?? undefined }); }} />
         </div>
       )}
 
       {showIconPicker && (
-        <div className="px-3 pb-3 border-t border-[var(--border)] pt-2">
-          <p className="text-xs text-[var(--text-muted)] mb-2">Group icon</p>
+        <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3" onDragStart={event => event.stopPropagation()}>
+          <p className="m-0 mb-2 text-xs font-medium text-[var(--text-muted)]">Group icon</p>
           <IconPicker value={group.icon ?? null} onChange={iconName => { onUpdate(group.id, { icon: iconName ?? undefined }); setShowIconPicker(false); }} />
         </div>
       )}
 
       {expanded && (
-        <div className="border-t border-[var(--border)] p-3 bg-[var(--bg)]">
-          {group.options.length === 0 && <p className="text-xs text-[var(--text-muted)] italic mb-2">No activities yet.</p>}
-          {group.options.map((opt, idx) => (
-            <OptionRow
-              key={opt.id}
-              option={opt}
-              groupId={group.id}
-              isFirst={idx === 0}
-              isLast={idx === group.options.length - 1}
-              onUpdate={onUpdateOption}
-              onDelete={onDeleteOption}
-              onMoveUp={() => moveOption(idx, -1)}
-              onMoveDown={() => moveOption(idx, 1)}
-            />
-          ))}
+        <div className="mt-3 border-t border-[var(--border)] pt-3">
+          {group.options.length === 0 && <p className="m-0 mb-2 text-xs italic text-[var(--text-muted)]">No activities yet.</p>}
+          <div className="flex flex-wrap gap-2">
+            {group.options.map(opt => (
+              <ActivityChip
+                key={opt.id}
+                option={opt}
+                isDragging={draggingOptionId === opt.id}
+                onUpdate={onUpdateOption}
+                onDelete={onDeleteOption}
+                onDragStart={setDraggingOptionId}
+                onDropOn={dropOption}
+              />
+            ))}
+          </div>
           {addingOption ? (
-            <div className="flex gap-2 mt-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <input
                 autoFocus
                 type="text"
@@ -215,16 +260,16 @@ const GroupCard = ({ group, isFirst, isLast, onUpdate, onDelete, onMoveUp, onMov
                 value={newOptionName}
                 onChange={e => setNewOptionName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') void handleAddOption(); if (e.key === 'Escape') { setAddingOption(false); setNewOptionName(''); } }}
-                className={cn(inputClass, 'flex-1 text-sm')}
+                className={cn(inputClass, 'min-w-[220px] flex-1 text-sm')}
               />
               <Button variant="default" onClick={() => void handleAddOption()} disabled={!newOptionName.trim() || savingOption} className="text-xs py-1 px-3 h-auto">
                 {savingOption ? 'Adding…' : 'Add'}
               </Button>
-              <button onClick={() => { setAddingOption(false); setNewOptionName(''); }} className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs">Cancel</button>
+              <button type="button" onClick={() => { setAddingOption(false); setNewOptionName(''); }} className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs">Cancel</button>
             </div>
           ) : (
-            <button onClick={() => setAddingOption(true)} className="mt-2 flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--accent-600)] transition-colors">
-              <Plus size={12} />Add activity
+            <button type="button" onClick={() => setAddingOption(true)} className="mt-3 inline-flex items-center gap-1 rounded-full border border-dashed border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--accent-600)] hover:text-[var(--accent-600)]">
+              <Plus size={13} />Add activity
             </button>
           )}
         </div>
@@ -238,6 +283,7 @@ const ActivityCustomizer = () => {
   const [addingGroup, setAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [savingGroup, setSavingGroup] = useState(false);
+  const [draggingGroupId, setDraggingGroupId] = useState<number | null>(null);
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -247,13 +293,11 @@ const ActivityCustomizer = () => {
     setSavingGroup(false);
   };
 
-  const moveGroup = (index: number, direction: number) => {
-    const ids = groups.map(g => g.id);
-    const newIds = [...ids];
-    const target = index + direction;
-    if (target < 0 || target >= newIds.length) return;
-    [newIds[index], newIds[target]] = [newIds[target], newIds[index]];
-    reorderGroups(newIds);
+  const dropGroup = (targetId: number) => {
+    if (!draggingGroupId) return;
+    const nextIds = reorderIds(groups.map(group => group.id), draggingGroupId, targetId);
+    reorderGroups(nextIds);
+    setDraggingGroupId(null);
   };
 
   if (loading && groups.length === 0) return <p className="text-sm text-[var(--text-muted)] mt-3">Loading categories…</p>;
@@ -261,16 +305,15 @@ const ActivityCustomizer = () => {
   return (
     <div className="mt-3">
       <div className="flex flex-col gap-3">
-        {groups.map((group, idx) => (
+        {groups.map(group => (
           <GroupCard
             key={group.id}
             group={group}
-            isFirst={idx === 0}
-            isLast={idx === groups.length - 1}
+            isDragging={draggingGroupId === group.id}
             onUpdate={updateGroup}
             onDelete={deleteGroup}
-            onMoveUp={() => moveGroup(idx, -1)}
-            onMoveDown={() => moveGroup(idx, 1)}
+            onDragStart={setDraggingGroupId}
+            onDropOn={dropGroup}
             onUpdateOption={updateGroupOption}
             onDeleteOption={deleteGroupOption}
             onReorderOptions={reorderGroupOptions}
@@ -280,7 +323,7 @@ const ActivityCustomizer = () => {
       </div>
 
       {addingGroup ? (
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mt-3">
           <input
             autoFocus
             type="text"
@@ -288,12 +331,12 @@ const ActivityCustomizer = () => {
             value={newGroupName}
             onChange={e => setNewGroupName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') void handleAddGroup(); if (e.key === 'Escape') { setAddingGroup(false); setNewGroupName(''); } }}
-            className={cn(inputClass, 'flex-1')}
+            className={cn(inputClass, 'min-w-[240px] flex-1')}
           />
           <Button variant="default" onClick={() => void handleAddGroup()} disabled={!newGroupName.trim() || savingGroup} className="shrink-0">
             {savingGroup ? 'Creating…' : 'Create'}
           </Button>
-          <button onClick={() => { setAddingGroup(false); setNewGroupName(''); }} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]">Cancel</button>
+          <button type="button" onClick={() => { setAddingGroup(false); setNewGroupName(''); }} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]">Cancel</button>
         </div>
       ) : (
         <Button variant="default" onClick={() => setAddingGroup(true)} className="mt-3 gap-2 rounded-full">

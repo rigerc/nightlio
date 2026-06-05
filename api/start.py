@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Railway startup script for Nightlio API
+Railway startup script for Waymark API
 """
 import os
 import sys
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     app = create_app(env)
 
     port = int(os.getenv("PORT", 5000))
-    print(f"Starting Nightlio API on port {port}")
+    print(f"Starting Waymark API on port {port}")
     print(f"Environment: {env}")
     print(
         f"Google Client ID: {'Set' if app.config.get('GOOGLE_CLIENT_ID') else 'Missing'}"

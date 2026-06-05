@@ -1,4 +1,4 @@
-"""Database schema helpers for Nightlio."""
+"""Database schema helpers for Waymark."""
 
 from __future__ import annotations
 
@@ -9,6 +9,40 @@ try:  # pragma: no cover - allow module to run outside package context
     from .database_common import DatabaseConnectionMixin, logger
 except ImportError:  # pragma: no cover - fallback for scripts
     from database_common import DatabaseConnectionMixin, logger  # type: ignore
+
+
+DEFAULT_GROUP_ICONS = {
+    "Emotions": "Heart",
+    "Sleep": "Moon",
+    "Productivity": "Target",
+    "Health": "Activity",
+    "Social": "Users",
+    "Romance": "Heart",
+    "Sports": "Dumbbell",
+    "Mental": "Brain",
+    "Chores": "Home",
+    "Hobbies": "Sparkles",
+    "Food": "Utensils",
+    "Bad Habits": "ZapOff",
+}
+
+DEFAULT_OPTION_ICONS = {
+    "happy": "Smile", "excited": "Sparkles", "grateful": "Heart", "content": "Smile", "calm": "Leaf",
+    "hopeful": "Sun", "proud": "Trophy", "loved": "Heart", "unsure": "Meh", "bored": "Meh",
+    "lonely": "CloudRain", "anxious": "Wind", "irritated": "ZapOff", "angry": "Flame", "stressed": "ZapOff", "sad": "Frown",
+    "well-rested": "Moon", "refreshed": "Sun", "napped": "Cloud", "tired": "ZapOff", "groggy": "Cloud", "exhausted": "Frown", "restless": "Wind",
+    "focused": "Target", "motivated": "Zap", "accomplished": "CircleCheck", "productive": "Briefcase", "creative": "Lightbulb",
+    "busy": "Clock", "distracted": "Phone", "scattered": "Wind", "overwhelmed": "CloudRain", "low-energy": "ZapOff",
+    "energetic": "Zap", "active": "Activity", "healthy": "Heart", "sick": "Pill", "sore": "Dumbbell", "sluggish": "ZapOff",
+    "connected": "Users", "social": "MessageCircle", "supported": "ThumbsUp", "isolated": "Cloud", "missing someone": "Heart",
+    "affectionate": "Heart", "romantic": "Sparkles", "intimate": "Heart", "distant": "Cloud", "heartbroken": "Frown", "longing": "Moon",
+    "worked out": "Dumbbell", "ran": "Footprints", "cycled": "Bike", "walked": "Footprints", "stretched": "PersonStanding", "yoga": "Leaf", "skipped workout": "ZapOff", "sedentary": "Tv",
+    "meditated": "Brain", "journaled": "Pencil", "mindful": "Leaf", "therapy": "MessageCircle", "racing thoughts": "Wind", "burned out": "Flame",
+    "cleaned": "Sparkles", "cooked": "Utensils", "groceries": "ShoppingBag", "laundry": "Cloud", "tidied": "Home", "behind on chores": "Clock",
+    "read": "BookOpen", "gamed": "Gamepad2", "music": "Music", "art": "Pencil", "crafts": "Sparkles", "outdoor": "TreePine", "learned something new": "Lightbulb",
+    "ate well": "Apple", "balanced meals": "Apple", "cooked at home": "Utensils", "skipped meals": "Clock", "junk food": "Pizza", "overate": "Utensils", "alcohol": "Coffee",
+    "smoked": "Wind", "drank too much": "Coffee", "late night screen time": "Phone", "skipped meds": "Pill", "no exercise": "ZapOff", "too much caffeine": "Coffee",
+}
 
 
 class DatabaseSchemaMixin(DatabaseConnectionMixin):
@@ -46,6 +80,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             self._migrate_group_options_schema()
             self._add_missing_default_groups()
             self._seed_default_group_colors()
+            self._seed_default_group_icons()
         except Exception as exc:  # pragma: no cover - initialization rarely fails
             logger.error("Database initialization failed: %s", exc)
             raise
@@ -414,6 +449,25 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 logger.info("Missing default groups added")
         except sqlite3.Error as exc:
             logger.warning("Adding missing default groups failed (non-critical): %s", exc)
+
+    def _seed_default_group_icons(self) -> None:
+        """Set icons on default groups and activities that have no icon yet."""
+        try:
+            with self._connect() as conn:
+                for name, icon in DEFAULT_GROUP_ICONS.items():
+                    conn.execute(
+                        "UPDATE groups SET icon = ? WHERE name = ? AND icon IS NULL",
+                        (icon, name),
+                    )
+                for name, icon in DEFAULT_OPTION_ICONS.items():
+                    conn.execute(
+                        "UPDATE group_options SET icon = ? WHERE name = ? AND icon IS NULL",
+                        (icon, name),
+                    )
+                conn.commit()
+                logger.info("Default group icons seeded")
+        except sqlite3.Error as exc:
+            logger.warning("Seeding default group icons failed (non-critical): %s", exc)
 
     def _seed_default_group_colors(self) -> None:
         """Set colors on default groups that have no color yet."""

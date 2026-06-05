@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Docker startup script for Nightlio API
+Docker startup script for Waymark API
 """
 import os
 import sys
@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     port = int(os.getenv("PORT", 5000))
 
-    print(f"Starting Nightlio API on port {port}")
+    print(f"Starting Waymark API on port {port}")
     print(f"Environment: {env}")
 
     app = create_app(env)

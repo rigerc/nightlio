@@ -1,4 +1,4 @@
-"""Shared database utilities and definitions for Nightlio."""
+"""Shared database utilities and definitions for Waymark."""
 
 from __future__ import annotations
 

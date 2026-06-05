@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to populate Nightlio database with realistic demo data for screenshots
+Script to populate Waymark database with realistic demo data for screenshots
 """
 
 import sys
@@ -195,7 +195,7 @@ Still buzzing with excitement. Music has such a powerful way of lifting your spi
         },
     ]
 
-    print("🌙 Creating demo data for Nightlio...")
+    print("🌙 Creating demo data for Waymark...")
 
     # Get the existing self-host user by google_id
     self_host_user = db.get_user_by_google_id("selfhost_default_user")

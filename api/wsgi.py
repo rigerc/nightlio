@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-WSGI entry point for Nightlio API
+WSGI entry point for Waymark API
 This file is used by production WSGI servers like Gunicorn
 """
 import os
@@ -45,7 +45,7 @@ if __name__ == "__main__":
             "-",
             "wsgi:application",
         ]
-        print(f"Starting Nightlio API with Gunicorn on port {port}")
+        print(f"Starting Waymark API with Gunicorn on port {port}")
         print(f"Environment: {env}")
         print(
             f"Google Client ID: {'Set' if app.config.get('GOOGLE_CLIENT_ID') else 'Missing'}"
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         subprocess.run(cmd)
     else:
         # use Flask for development
-        print(f"Starting Nightlio API (development) on port {port}")
+        print(f"Starting Waymark API (development) on port {port}")
         print(f"Environment: {env}")
         print(
             f"Google Client ID: {'Set' if app.config.get('GOOGLE_CLIENT_ID') else 'Missing'}"

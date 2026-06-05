@@ -40,7 +40,7 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     flask_cfg = Config()
     cfg = get_config()
 
-    app = FastAPI(title="Nightlio API", docs_url="/api/docs", redoc_url="/api/redoc")
+    app = FastAPI(title="Waymark API", docs_url="/api/docs", redoc_url="/api/redoc")
 
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

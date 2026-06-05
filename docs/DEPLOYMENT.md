@@ -1,6 +1,6 @@
 # 🚀 Production Deployment Guide
 
-This guide covers deploying Nightlio in production environments with proper security, performance, and reliability.
+This guide covers deploying Waymark in production environments with proper security, performance, and reliability.
 
 ## Quick Production Setup
 

@@ -23,7 +23,7 @@ const GroupSelector = ({ groups, selectedOptions, onOptionToggle }: GroupSelecto
         return (
           <div key={group.id} className="mb-6 bg-[var(--surface)] rounded-2xl p-5 border border-[var(--border)] shadow-sm">
             <h3 className="m-0 mb-3 text-base font-medium tracking-wide flex items-center gap-2" style={{ color: headerColor }}>
-              {GroupIconComp && <GroupIconComp size={16} strokeWidth={1.5} style={{ color: headerColor }} />}
+              {GroupIconComp && <GroupIconComp className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.75} style={{ color: headerColor }} />}
               {group.name}
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -50,7 +50,7 @@ const GroupSelector = ({ groups, selectedOptions, onOptionToggle }: GroupSelecto
                     )}
                     style={isSelected ? selectedStyle : {}}
                   >
-                    {OptionIconComp && <OptionIconComp size={13} strokeWidth={1.5} className="shrink-0" />}
+                    {OptionIconComp && <OptionIconComp className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" strokeWidth={1.75} />}
                     {option.name}
                   </button>
                 );

@@ -3,9 +3,9 @@ export type MoodValue = 1 | 2 | 3 | 4 | 5;
 export interface Selection {
   id: number;
   name: string;
-  icon: string;
+  icon?: string | null;
   group_id: number;
-  group_color: string;
+  group_color?: string | null;
 }
 
 export interface Entry {

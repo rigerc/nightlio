@@ -1,6 +1,6 @@
-# 🐳 Docker Quick Start Guide for Nightlio
+# 🐳 Docker Quick Start Guide for Waymark
 
-This guide will help you get Nightlio running with Docker in just a f### Changing Ports
+This guide will help you get Waymark running with Docker in just a f### Changing Ports
 Edit `docker-compose.yml` to change ports:
 ```yaml
 services:

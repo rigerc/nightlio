@@ -122,7 +122,7 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
                   className="tag"
                   style={bg ? { backgroundColor: bg, borderColor: border, borderWidth: 1, borderStyle: 'solid' } : {}}
                 >
-                  {IconComp && <IconComp size={11} strokeWidth={1.5} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />}
+                  {IconComp && <IconComp size={14} strokeWidth={1.75} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />}
                   {selection.name}
                 </span>
               );

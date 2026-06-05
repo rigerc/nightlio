@@ -1,4 +1,4 @@
-# Production Docker Compose for Nightlio
+# Production Docker Compose for Waymark
 # Use this for production deployments with better security and performance
 
 services:

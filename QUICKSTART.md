@@ -1,4 +1,4 @@
-# 🚀 Quick Start - Get Nightlio Running in 2 Minutes
+# 🚀 Quick Start - Get Waymark Running in 2 Minutes
 
 ## Option 1: Automated Setup (Recommended)
 

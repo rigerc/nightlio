@@ -6,7 +6,7 @@ PORT=${1:-5000}
 WORKERS=${WORKERS:-4}
 TIMEOUT=${TIMEOUT:-120}
 
-echo "Starting Nightlio API with Gunicorn"
+echo "Starting Waymark API with Gunicorn"
 echo "Port: $PORT"
 echo "Workers: $WORKERS"
 echo "Timeout: $TIMEOUT"

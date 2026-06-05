@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { CSSProperties } from 'react';
 import { ChevronDown, ChevronRight, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { useGroups } from '../../hooks/useGroups';
 import { getIconComponent } from '../../utils/iconRegistry';
@@ -15,9 +16,10 @@ interface EditableNameProps {
   value: string;
   onSave: (value: string) => void;
   className?: string;
+  style?: CSSProperties;
 }
 
-const EditableName = ({ value, onSave, className = '' }: EditableNameProps) => {
+const EditableName = ({ value, onSave, className = '', style }: EditableNameProps) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -37,6 +39,7 @@ const EditableName = ({ value, onSave, className = '' }: EditableNameProps) => {
         onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value); setEditing(false); } }}
         className={cn(inputClass, 'min-w-0 flex-1', className)}
+        style={style}
       />
     );
   }
@@ -44,6 +47,7 @@ const EditableName = ({ value, onSave, className = '' }: EditableNameProps) => {
     <span
       onClick={() => { setDraft(value); setEditing(true); }}
       className={cn('cursor-text hover:underline decoration-dashed underline-offset-2 font-medium text-[var(--text)]', className)}
+      style={style}
       title="Click to edit"
     >
       {value}
@@ -76,9 +80,9 @@ const OptionRow = ({ option, isFirst, isLast, onUpdate, onDelete, onMoveUp, onMo
         <button
           onClick={() => setShowIconPicker(p => !p)}
           title={option.icon ? `Icon: ${option.icon}` : 'Add icon'}
-          className={cn('shrink-0 w-7 h-7 rounded-lg flex items-center justify-center border transition-colors', showIconPicker ? 'border-[var(--accent-600)] bg-[var(--accent-bg)] text-[var(--accent-600)]' : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-600)] hover:text-[var(--text)]')}
+          className={cn('shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center border border-[var(--border)] transition-colors', showIconPicker ? 'bg-[var(--bg)] text-[var(--text)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg)] hover:text-[var(--text)]')}
         >
-          {IconComp ? <IconComp size={14} strokeWidth={1.5} /> : <Plus size={12} />}
+          {IconComp ? <IconComp className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={1.75} /> : <Plus className="w-5 h-5 sm:w-6 sm:h-6" />}
         </button>
         <EditableName value={option.name} onSave={name => onUpdate(option.id, { name })} className="flex-1 text-sm" />
         <button
@@ -149,12 +153,11 @@ const GroupCard = ({ group, isFirst, isLast, onUpdate, onDelete, onMoveUp, onMov
         <button
           onClick={() => { setShowIconPicker(p => !p); setShowColorPicker(false); }}
           title={group.icon ? `Icon: ${group.icon}` : 'Set group icon'}
-          className={cn('shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border-2 transition-colors', showIconPicker ? 'border-[var(--accent-600)]' : 'border-[var(--border)] hover:border-[var(--accent-600)]')}
-          style={accentColor ? { borderColor: accentColor, color: accentColor } : {}}
+          className={cn('shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center border-2 border-[var(--border)] transition-colors', showIconPicker ? 'bg-[var(--bg)]' : 'hover:bg-[var(--bg)]')}
         >
-          {GroupIconComp ? <GroupIconComp size={16} strokeWidth={1.5} style={accentColor ? { color: accentColor } : {}} /> : <Plus size={14} className="text-[var(--text-muted)]" />}
+          {GroupIconComp ? <GroupIconComp className="w-7 h-7 sm:w-8 sm:h-8 text-[var(--text-muted)]" strokeWidth={1.75} /> : <Plus className="w-6 h-6 sm:w-7 sm:h-7 text-[var(--text-muted)]" />}
         </button>
-        <EditableName value={group.name} onSave={name => onUpdate(group.id, { name })} className="flex-1 text-base" />
+        <EditableName value={group.name} onSave={name => onUpdate(group.id, { name })} className="flex-1 text-base" style={accentColor ? { color: accentColor } : undefined} />
         <button
           onClick={() => { setShowColorPicker(p => !p); setShowIconPicker(false); }}
           title="Set group color"

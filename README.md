@@ -1,7 +1,7 @@
 <div align="center">
 
 <img src="https://raw.githubusercontent.com/shirsakm/nightlio/refs/heads/dev/public/logo.png" height="60px" />
-<h1>Nightlio</h1>
+<h1>Waymark</h1>
 
 [![GitHub license](https://img.shields.io/github/license/shirsakm/nightlio?style=flat-square)](https://github.com/shirsakm/nightlio/blob/main/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/shirsakm/nightlio?style=flat-square)](https://github.com/shirsakm/nightlio/stargazers)
@@ -17,11 +17,11 @@
 <!-- <img width="1366" height="645" alt="image" src="https://github.com/user-attachments/assets/dd50ec1f-4c3f-4588-907c-dca6ac1f7f98" /> -->
 ![Preview](https://github.com/user-attachments/assets/77f52abc-b4f8-439d-9bb2-772e3996256c)
 
-## Why Nightlio?
+## Why Waymark?
 
-Nightlio was inspired by awesome mood-tracking apps like Daylio, but born out of frustration with aggressive subscription models, paywalls, and a lack of cross-platform access. I wanted a beautiful, effective tool to log my mood and journal my thoughts without compromising on privacy or being locked into a single device.
+Waymark was inspired by awesome mood-tracking apps like Daylio, but born out of frustration with aggressive subscription models, paywalls, and a lack of cross-platform access. I wanted a beautiful, effective tool to log my mood and journal my thoughts without compromising on privacy or being locked into a single device.
 
-Nightlio is the result: a feature-complete, open-source alternative that you can run anywhere. It's fully web-based and responsive for use on both desktop and mobile. No ads, no subscriptions, and absolutely no data mining. Just you and your data.
+Waymark is the result: a feature-complete, open-source alternative that you can run anywhere. It's fully web-based and responsive for use on both desktop and mobile. No ads, no subscriptions, and absolutely no data mining. Just you and your data.
 
 ### Key Features
 
@@ -39,9 +39,9 @@ Nightlio is the result: a feature-complete, open-source alternative that you can
 ### Docker Quickstart (Recommended)
 
 > [!NOTE]
-> By default, Nightlio runs in **single-user mode**. Enable Google OAuth for multi-user support.
+> By default, Waymark runs in **single-user mode**. Enable Google OAuth for multi-user support.
 
-Get your own Nightlio instance running in under 5 minutes.
+Get your own Waymark instance running in under 5 minutes.
 
 ```bash
 # 1. Clone the repository
@@ -174,7 +174,7 @@ docker compose up -d
 
 ### 🔧 Configuration (`.env`)
 
-You can customize your Nightlio instance using environment variables in the `.env` file.
+You can customize your Waymark instance using environment variables in the `.env` file.
 
 #### Server (API)
 ```
@@ -308,7 +308,7 @@ All protected endpoints require an `Authorization: Bearer <jwt>` header unless o
 
 ## Roadmap
 
-Nightlio is actively developed. Here are some of the features planned for the future:
+Waymark is actively developed. Here are some of the features planned for the future:
 - [ ] **Responsive Design:** Full support for usage on mobile devices.
 - [ ] **Multi-User Support:** Full support for multiple user accounts on a single instance.
 - [ ] **Data Import/Export:** Tools to import data from other services (like Daylio) and export your data to standard formats (JSON, CSV).

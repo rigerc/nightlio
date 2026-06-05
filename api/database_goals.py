@@ -1,4 +1,4 @@
-"""Goal management mixin for Nightlio."""
+"""Goal management mixin for Waymark."""
 
 from __future__ import annotations
 

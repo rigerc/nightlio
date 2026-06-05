@@ -14,9 +14,11 @@ interface IconPickerProps {
 const IconPicker = ({ value, onChange, icons = AVAILABLE_ICONS, className = '' }: IconPickerProps) => {
   const [search, setSearch] = useState('');
 
-  const filtered = search.trim()
-    ? icons.filter(i => i.label.toLowerCase().includes(search.toLowerCase()) || i.name.toLowerCase().includes(search.toLowerCase()))
-    : icons;
+  const safeIcons = icons.filter(icon => Boolean(icon.component));
+  const normalizedSearch = search.trim().toLowerCase();
+  const filtered = normalizedSearch
+    ? safeIcons.filter(icon => icon.label.toLowerCase().includes(normalizedSearch) || icon.name.toLowerCase().includes(normalizedSearch))
+    : safeIcons;
 
   return (
     <div className={cn('bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 shadow-md', className)}>
@@ -30,18 +32,20 @@ const IconPicker = ({ value, onChange, icons = AVAILABLE_ICONS, className = '' }
           className="w-full pl-8 pr-3 py-1.5 text-sm bg-[var(--bg)] border border-[var(--border)] rounded-lg text-[var(--text)] outline-none focus:border-[var(--accent-600)] transition-colors"
         />
       </div>
-      <div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
+      <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-h-64 overflow-y-auto">
         <button
+          type="button"
           onClick={() => onChange(null)}
           title="No icon"
+          aria-label="No icon"
           className={cn(
-            'flex items-center justify-center w-9 h-9 rounded-lg transition-colors text-xs text-[var(--text-muted)]',
+            'flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl transition-colors text-xs text-[var(--text-muted)]',
             !value
-              ? 'bg-[var(--accent-bg)] border-2 border-[var(--accent-600)]'
+              ? 'bg-[var(--accent-bg)] border-2 border-[var(--accent-600)] text-white'
               : 'hover:bg-[var(--bg)] border-2 border-transparent'
           )}
         >
-          <X size={14} />
+          <X className="w-7 h-7 sm:w-8 sm:h-8" strokeWidth={1.8} />
         </button>
         {filtered.map(icon => {
           const IconComp = icon.component;
@@ -49,19 +53,26 @@ const IconPicker = ({ value, onChange, icons = AVAILABLE_ICONS, className = '' }
           return (
             <button
               key={icon.name}
+              type="button"
               onClick={() => onChange(icon.name)}
               title={icon.label}
+              aria-label={icon.label}
               className={cn(
-                'flex items-center justify-center w-9 h-9 rounded-lg transition-colors',
+                'flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl transition-colors',
                 isSelected
-                  ? 'bg-[var(--accent-bg)] border-2 border-[var(--accent-600)] text-[var(--accent-600)]'
+                  ? 'bg-[var(--accent-bg)] border-2 border-[var(--accent-600)] text-white'
                   : 'hover:bg-[var(--bg)] border-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'
               )}
             >
-              <IconComp size={18} strokeWidth={1.5} />
+              <IconComp className="w-7 h-7 sm:w-8 sm:h-8" strokeWidth={1.75} />
             </button>
           );
         })}
+        {filtered.length === 0 && (
+          <p className="col-span-5 sm:col-span-6 m-0 px-2 py-3 text-center text-xs text-[var(--text-muted)]">
+            No icons found.
+          </p>
+        )}
       </div>
     </div>
   );

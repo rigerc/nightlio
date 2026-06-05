@@ -40,14 +40,14 @@ const Sidebar = ({ onLoadStatistics }: SidebarProps) => {
     );
 
   return (
-    <aside className="fixed left-0 top-0 w-[280px] h-screen z-50 bg-[color-mix(in_oklab,var(--surface)_60%,var(--bg))] backdrop-blur-xl border-r border-[var(--border)] box-border transition-transform duration-300">
+    <aside className="sidebar hidden md:block fixed left-0 top-0 w-[280px] h-screen z-50 bg-[color-mix(in_oklab,var(--surface)_60%,var(--bg))] backdrop-blur-xl border-r border-[var(--border)] box-border transition-transform duration-300">
       <div className="flex flex-col gap-1 p-6 h-full overflow-y-auto">
         <div className="flex flex-col gap-3 pb-6 border-b border-[var(--border)] mb-2">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-[10px] grid place-items-center overflow-hidden">
-              <img src="/logo.png" alt="Nightlio" className="w-full h-full object-contain block" />
+              <img src="/logo.png" alt="Waymark" className="w-full h-full object-contain block" />
             </div>
-            <strong className="text-[var(--text)] text-2xl font-bold tracking-tight">Nightlio</strong>
+            <strong className="text-[var(--text)] text-2xl font-bold tracking-tight">Waymark</strong>
           </div>
           <span className="text-[var(--text)] opacity-85 text-sm pl-1">Your daily mood companion.</span>
         </div>

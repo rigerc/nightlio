@@ -1,4 +1,4 @@
-# Optional dependencies for Nightlio features
+# Optional dependencies for Waymark features
 # Install only when enabling Google OAuth or Web3
 
 # Google OAuth

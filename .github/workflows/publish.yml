@@ -1,4 +1,4 @@
-name: Publish Nightlio images to GHCR
+name: Publish Waymark images to GHCR
 
 on:
   push:

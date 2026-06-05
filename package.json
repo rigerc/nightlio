@@ -34,7 +34,7 @@
     "test": "npm run typecheck && npm run lint",
     "test:api": "PYTHONPATH=. api/venv/bin/pytest",
     "api:install": "python3 -m venv api/venv && api/venv/bin/pip install -r api/requirements.txt",
-    "api": "PYTHONPATH=. api/venv/bin/uvicorn api.main:app --reload --port 5000",
+    "api": "PYTHONPATH=. api/venv/bin/uvicorn api.main:app --reload --reload-dir api --port 5000",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",

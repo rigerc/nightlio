@@ -121,7 +121,6 @@ const EntryView = ({
     activeEntryIdRef.current = activeEntryId;
   }, [activeEntryId]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isEditing && editingEntry) {
       createdByAutosaveRef.current = false;
@@ -173,7 +172,7 @@ const EntryView = ({
     setLastSavedAt(null);
     setSaveState(isBurnerMode ? 'disabled' : 'idle');
     setSaveErrorMessage('');
-  }, [isEditing, editingEntry, isBurnerMode]);
+  }, [isEditing, editingEntry, isBurnerMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isEditing) {

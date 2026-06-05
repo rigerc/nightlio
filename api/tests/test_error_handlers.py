@@ -1,17 +1,12 @@
-from flask import Flask
-from api.utils.error_handlers import setup_error_handlers
-import json
+from fastapi.testclient import TestClient
+from api.main import create_app
 
-def test_setup_error_handlers():
-    app = Flask(__name__)
-    setup_error_handlers(app)
-    
-    with app.test_client() as client:
-        # Test 404
-        response = client.get("/non-existent-route")
-        assert response.status_code == 404
-        data = json.loads(response.data)
-        assert data["error"] == "Resource not found"
+TEST_DB = "/tmp/nightlio_test_errors.db"
 
-        # Note: 400 and ValueError might require simulating specific route triggers 
-        # or specific app logic which goes beyond a very simple test.
+
+def test_not_found_returns_error_json():
+    client = TestClient(create_app(db_path=TEST_DB), raise_server_exceptions=False)
+    response = client.get("/api/non-existent-route-xyz")
+    assert response.status_code == 404
+    data = response.json()
+    assert "error" in data

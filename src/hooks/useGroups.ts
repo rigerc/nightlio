@@ -1,12 +1,28 @@
 import { useState, useEffect } from 'react';
 import apiService from '../services/api';
+import type { Group } from '../types';
 
-export const useGroups = () => {
-  const [groups, setGroups] = useState([]);
+export interface UseGroupsReturn {
+  groups: Group[];
+  loading: boolean;
+  error: string | null;
+  createGroup: (name: string) => Promise<boolean>;
+  createGroupOption: (groupId: number, name: string) => Promise<boolean>;
+  updateGroup: (groupId: number, data: Partial<{ name: string; color: string; icon: string; sort_order: number }>) => Promise<boolean>;
+  updateGroupOption: (optionId: number, data: Partial<{ name: string; icon: string; sort_order: number }>) => Promise<boolean>;
+  deleteGroup: (groupId: number) => Promise<boolean>;
+  deleteGroupOption: (optionId: number) => Promise<boolean>;
+  reorderGroups: (orderedIds: number[]) => Promise<void>;
+  reorderGroupOptions: (groupId: number, orderedIds: number[]) => Promise<void>;
+  refreshGroups: () => Promise<void>;
+}
+
+export const useGroups = (): UseGroupsReturn => {
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadGroups = async () => {
+  const loadGroups = async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -20,7 +36,7 @@ export const useGroups = () => {
     }
   };
 
-  const createGroup = async (name) => {
+  const createGroup = async (name: string): Promise<boolean> => {
     try {
       await apiService.createGroup({ name });
       await loadGroups();
@@ -32,7 +48,7 @@ export const useGroups = () => {
     }
   };
 
-  const createGroupOption = async (groupId, name) => {
+  const createGroupOption = async (groupId: number, name: string): Promise<boolean> => {
     try {
       await apiService.createGroupOption(groupId, { name });
       await loadGroups();
@@ -44,7 +60,7 @@ export const useGroups = () => {
     }
   };
 
-  const updateGroup = async (groupId, data) => {
+  const updateGroup = async (groupId: number, data: Partial<{ name: string; color: string; icon: string; sort_order: number }>): Promise<boolean> => {
     try {
       await apiService.updateGroup(groupId, data);
       await loadGroups();
@@ -56,7 +72,7 @@ export const useGroups = () => {
     }
   };
 
-  const updateGroupOption = async (optionId, data) => {
+  const updateGroupOption = async (optionId: number, data: Partial<{ name: string; icon: string; sort_order: number }>): Promise<boolean> => {
     try {
       await apiService.updateGroupOption(optionId, data);
       await loadGroups();
@@ -68,7 +84,7 @@ export const useGroups = () => {
     }
   };
 
-  const deleteGroup = async (groupId) => {
+  const deleteGroup = async (groupId: number): Promise<boolean> => {
     try {
       await apiService.deleteGroup(groupId);
       await loadGroups();
@@ -80,7 +96,7 @@ export const useGroups = () => {
     }
   };
 
-  const deleteGroupOption = async (optionId) => {
+  const deleteGroupOption = async (optionId: number): Promise<boolean> => {
     try {
       await apiService.deleteGroupOption(optionId);
       await loadGroups();
@@ -92,8 +108,8 @@ export const useGroups = () => {
     }
   };
 
-  const reorderGroups = async (orderedIds) => {
-    const ordered = orderedIds.map(id => groups.find(g => g.id === id)).filter(Boolean);
+  const reorderGroups = async (orderedIds: number[]): Promise<void> => {
+    const ordered = orderedIds.map(id => groups.find(g => g.id === id)).filter((g): g is Group => g !== undefined);
     setGroups(ordered);
     try {
       await apiService.reorderGroups(orderedIds);
@@ -103,10 +119,10 @@ export const useGroups = () => {
     }
   };
 
-  const reorderGroupOptions = async (groupId, orderedIds) => {
+  const reorderGroupOptions = async (groupId: number, orderedIds: number[]): Promise<void> => {
     setGroups(prev => prev.map(g => {
       if (g.id !== groupId) return g;
-      const ordered = orderedIds.map(id => g.options.find(o => o.id === id)).filter(Boolean);
+      const ordered = orderedIds.map(id => g.options.find(o => o.id === id)).filter((o): o is NonNullable<typeof o> => o !== undefined);
       return { ...g, options: ordered };
     }));
     try {
@@ -118,21 +134,13 @@ export const useGroups = () => {
   };
 
   useEffect(() => {
-    loadGroups();
+    void loadGroups();
   }, []);
 
   return {
-    groups,
-    loading,
-    error,
-    createGroup,
-    createGroupOption,
-    updateGroup,
-    updateGroupOption,
-    deleteGroup,
-    deleteGroupOption,
-    reorderGroups,
-    reorderGroupOptions,
+    groups, loading, error,
+    createGroup, createGroupOption, updateGroup, updateGroupOption,
+    deleteGroup, deleteGroupOption, reorderGroups, reorderGroupOptions,
     refreshGroups: loadGroups,
   };
 };

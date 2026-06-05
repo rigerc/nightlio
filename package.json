@@ -27,9 +27,10 @@
     "dev": "vite",
     "build": "NODE_OPTIONS='--max-old-space-size=768' vite build",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "api": "cd api && python3 -m venv venv && venv/bin/pip install -r requirements.txt && venv/bin/flask run --no-debugger",
-    "api:dev": "cd api && venv/bin/python start.py",
+    "api": "cd api && python3 -m venv venv && venv/bin/pip install -r requirements.txt && venv/bin/uvicorn api.main:app --reload --port 5000",
+    "api:dev": "PYTHONPATH=. api/venv/bin/uvicorn api.main:app --reload --port 5000",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
@@ -59,12 +60,15 @@
     "@eslint/js": "^9.32.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
+    "@typescript-eslint/eslint-plugin": "^8.60.1",
+    "@typescript-eslint/parser": "^8.60.1",
     "@vitejs/plugin-react": "^4.7.0",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
     "rollup-plugin-visualizer": "^6.0.5",
+    "typescript": "^6.0.3",
     "vite": "^7.1.0"
   }
 }

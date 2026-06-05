@@ -1,9 +1,9 @@
-// Generate a transparent-background version of an image by removing pixels
-// close to the background color (sampled from the top-left corner).
-// Returns a Promise that resolves to a data URL (PNG) or null on failure.
-export async function generateTransparentIcon(src, { threshold = 20, scale = 1 } = {}) {
+export async function generateTransparentIcon(
+  src: string,
+  { threshold = 20, scale = 1 }: { threshold?: number; scale?: number } = {}
+): Promise<string | null> {
   try {
-    const img = await new Promise((resolve, reject) => {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const i = new Image();
       i.crossOrigin = 'anonymous';
       i.onload = () => resolve(i);
@@ -20,35 +20,31 @@ export async function generateTransparentIcon(src, { threshold = 20, scale = 1 }
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Draw scaled image
     ctx.drawImage(img, 0, 0, width, height);
 
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
 
-    // Sample background color from top-left pixel
     const r0 = data[0], g0 = data[1], b0 = data[2];
 
-    // Remove near-background pixels
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i], g = data[i + 1], b = data[i + 2];
       if (Math.abs(r - r0) <= threshold && Math.abs(g - g0) <= threshold && Math.abs(b - b0) <= threshold) {
-        data[i + 3] = 0; // alpha -> transparent
+        data[i + 3] = 0;
       }
     }
 
     ctx.putImageData(imgData, 0, 0);
     return canvas.toDataURL('image/png');
   } catch {
-    // Fail silently and let caller fallback
     return null;
   }
 }
 
-// Replace the <link rel="icon"> with the generated transparent icon.
-export async function applyTransparentFavicon({ src = '/logo.png', threshold = 20 } = {}) {
-  // If threshold == 0, just point the favicon to the src without processing
-  const link = document.querySelector('link[rel="icon"]') || document.createElement('link');
+export async function applyTransparentFavicon(
+  { src = '/logo.png', threshold = 20 }: { src?: string; threshold?: number } = {}
+): Promise<boolean> {
+  const link = (document.querySelector('link[rel="icon"]') || document.createElement('link')) as HTMLLinkElement;
   link.setAttribute('rel', 'icon');
   link.setAttribute('type', 'image/png');
   if (threshold === 0) {

@@ -1,7 +1,18 @@
-import { Frown, Meh, Smile, Heart } from 'lucide-react';
+import { Frown, Meh, Smile, Heart, type LucideProps } from 'lucide-react';
+import type { ComponentType } from 'react';
+import type { Entry, MoodValue } from '../types';
 
-// Resolve a CSS variable to its computed value (fallback to provided value)
-const cssVar = (name, fallback) => {
+type MoodIcon = ComponentType<LucideProps>;
+
+interface MoodDef {
+  icon: MoodIcon;
+  value: MoodValue;
+  color: string;
+  label: string;
+  tag: string;
+}
+
+const cssVar = (name: string, fallback: string): string => {
   try {
     const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return v || fallback;
@@ -10,7 +21,7 @@ const cssVar = (name, fallback) => {
   }
 };
 
-export const MOODS = [
+export const MOODS: MoodDef[] = [
   { icon: Frown, value: 1, color: 'var(--mood-1)', label: 'Terrible', tag: 'dark+ambient' },
   { icon: Frown, value: 2, color: 'var(--mood-2)', label: 'Bad', tag: 'melancholic' },
   { icon: Meh,   value: 3, color: 'var(--mood-3)', label: 'Okay', tag: 'lofi+chill' },
@@ -18,22 +29,21 @@ export const MOODS = [
   { icon: Heart, value: 5, color: 'var(--mood-5)', label: 'Amazing', tag: 'synthwave+energy' },
 ];
 
-export const getMoodIcon = (moodValue) => {
+export const getMoodIcon = (moodValue: number): { icon: MoodIcon; color: string } => {
   const mood = MOODS.find(m => m.value === moodValue);
   if (!mood) return { icon: Meh, color: cssVar('--mood-3', '#f1fa8c') };
-  // Resolve CSS var to concrete color for places that need an actual color value
   const resolved = mood.color.startsWith('var(')
     ? cssVar(mood.color.slice(4, -1), '#999')
     : mood.color;
   return { icon: mood.icon, color: resolved };
 };
 
-export const getMoodLabel = (moodValue) => {
+export const getMoodLabel = (moodValue: number): string => {
   const mood = MOODS.find(m => m.value === moodValue);
   return mood ? mood.label : 'Unknown';
 };
 
-export const formatEntryTime = (entry) => {
+export const formatEntryTime = (entry: Pick<Entry, 'date' | 'created_at'>): string => {
   if (entry.created_at) {
     const date = new Date(entry.created_at);
     const time = date.toLocaleTimeString([], {
@@ -46,17 +56,22 @@ export const formatEntryTime = (entry) => {
   return entry.date;
 };
 
-export const getWeeklyMoodData = (pastEntries, days = 7) => {
-  const today = new Date();
-  const weekData = [];
+interface WeekDayData {
+  date: string;
+  mood: MoodValue | null;
+  moodEmoji: MoodIcon | null;
+  hasEntry: boolean;
+}
 
-  // Create entry lookup by date
-  const entryLookup = {};
+export const getWeeklyMoodData = (pastEntries: Entry[], days = 7): WeekDayData[] => {
+  const today = new Date();
+  const weekData: WeekDayData[] = [];
+
+  const entryLookup: Record<string, Entry> = {};
   pastEntries.forEach(entry => {
     entryLookup[entry.date] = entry;
   });
 
-  // Get last N days
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
@@ -76,11 +91,11 @@ export const getWeeklyMoodData = (pastEntries, days = 7) => {
   return weekData;
 };
 
-export const movingAverage = (arr, windowSize = 7) => {
-  const res = [];
+export const movingAverage = (arr: (number | null)[], windowSize = 7): (number | null)[] => {
+  const res: (number | null)[] = [];
   for (let i = 0; i < arr.length; i++) {
     const start = Math.max(0, i - windowSize + 1);
-    const slice = arr.slice(start, i + 1).filter((v) => v != null);
+    const slice = arr.slice(start, i + 1).filter((v): v is number => v != null);
     res.push(slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : null);
   }
   return res;

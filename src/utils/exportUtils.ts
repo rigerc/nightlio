@@ -1,7 +1,7 @@
-// Utility functions for exporting charts and data
 import { getMoodLabel } from './moodUtils';
+import type { Entry, Group } from '../types';
 
-function triggerDownload(uri, filename) {
+function triggerDownload(uri: string, filename: string): void {
   const link = document.createElement('a');
   link.download = filename;
   link.href = uri;
@@ -10,15 +10,15 @@ function triggerDownload(uri, filename) {
   document.body.removeChild(link);
 }
 
-export function exportEntryToMarkdown(entry, groups = []) {
-  const optionToGroup = new Map();
+export function exportEntryToMarkdown(entry: Entry, groups: Group[] = []): void {
+  const optionToGroup = new Map<number, string>();
   for (const group of groups) {
     for (const option of group.options ?? []) {
       optionToGroup.set(option.id, group.name);
     }
   }
 
-  const groupedActivities = {};
+  const groupedActivities: Record<string, string[]> = {};
   for (const sel of entry.selections ?? []) {
     const groupName = optionToGroup.get(sel.id) ?? 'Other';
     if (!groupedActivities[groupName]) groupedActivities[groupName] = [];
@@ -54,16 +54,17 @@ export function exportEntryToMarkdown(entry, groups = []) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-export function exportSVGToPNG(svgElement, filename = 'chart.png', scale = 2) {
+export function exportSVGToPNG(svgElement: SVGElement, filename = 'chart.png', scale = 2): void {
   if (!svgElement) return;
   const svgData = new XMLSerializer().serializeToString(svgElement);
   const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(svgBlob);
 
   const img = new Image();
-  const bbox = svgElement.getBBox ? svgElement.getBBox() : { width: svgElement.clientWidth, height: svgElement.clientHeight };
-  const width = Math.max(1, bbox.width || svgElement.clientWidth || 800);
-  const height = Math.max(1, bbox.height || svgElement.clientHeight || 400);
+  const bbox = 'getBBox' in svgElement ? (svgElement as SVGGraphicsElement).getBBox() : null;
+  const el = svgElement as unknown as HTMLElement;
+  const width = Math.max(1, (bbox?.width || el.clientWidth || 800));
+  const height = Math.max(1, (bbox?.height || el.clientHeight || 400));
 
   img.onload = () => {
     try {
@@ -71,6 +72,7 @@ export function exportSVGToPNG(svgElement, filename = 'chart.png', scale = 2) {
       canvas.width = Math.ceil(width * scale);
       canvas.height = Math.ceil(height * scale);
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -89,10 +91,10 @@ export function exportSVGToPNG(svgElement, filename = 'chart.png', scale = 2) {
   img.src = url;
 }
 
-export function exportDataToCSV(rows, headers, filename = 'data.csv') {
+export function exportDataToCSV(rows: Record<string, unknown>[], headers: string[], filename = 'data.csv'): void {
   if (!Array.isArray(rows) || rows.length === 0) return;
   const headerRow = headers.join(',');
-  const escape = (v) => {
+  const escape = (v: unknown): string => {
     if (v === null || v === undefined) return '';
     const s = String(v);
     if (s.includes(',') || s.includes('"') || s.includes('\n')) {

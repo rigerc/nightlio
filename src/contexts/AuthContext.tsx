@@ -1,28 +1,36 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import apiService from '../services/api';
 import { useConfig } from './ConfigContext';
+import type { User } from '../types';
 
-const AuthContext = createContext();
+interface AuthContextValue {
+  user: User | null;
+  loading: boolean;
+  login: (googleToken: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  isAuthenticated: boolean;
+}
 
-export const useAuth = () => {
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { config, loading: configLoading } = useConfig();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('nightlio_token'));
+  const [token, setToken] = useState<string | null>(localStorage.getItem('nightlio_token'));
 
   const logout = useCallback(() => {
     localStorage.removeItem('nightlio_token');
     setToken(null);
     setUser(null);
-    apiService.setAuthToken(null);
+    apiService.setAuthToken('');
   }, []);
 
   const localLogin = useCallback(async () => {
@@ -37,7 +45,7 @@ export const AuthProvider = ({ children }) => {
         apiService.setAuthToken(jwtToken);
       }
       return { success: true };
-  } catch {
+    } catch {
       return { success: false, error: 'Local login failed' };
     } finally {
       setLoading(false);
@@ -45,12 +53,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const verifyToken = useCallback(async () => {
+    if (!token) return;
     try {
       const userData = await apiService.verifyToken(token);
       setUser(userData.user);
       apiService.setAuthToken(token);
-  } catch {
-      // If verify fails, clear token and in self-host mode immediately local-login
+    } catch {
       logout();
       if (!config.enable_google_oauth) {
         await localLogin();
@@ -64,16 +72,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (configLoading) return;
     if (token) {
-      verifyToken();
+      void verifyToken();
     } else if (!config.enable_google_oauth) {
-      // In self-host mode, auto-login to local account on first visit
-      localLogin();
+      void localLogin();
     } else {
       setLoading(false);
     }
   }, [token, configLoading, config.enable_google_oauth, verifyToken, localLogin]);
 
-  const login = async (googleToken) => {
+  const login = async (googleToken: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
       const response = await apiService.googleAuth(googleToken);
@@ -84,22 +91,14 @@ export const AuthProvider = ({ children }) => {
       apiService.setAuthToken(jwtToken);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: (error as Error).message };
     } finally {
       setLoading(false);
     }
   };
 
-  const value = {
-    user,
-    loading,
-    login,
-    logout,
-    isAuthenticated: !!user
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

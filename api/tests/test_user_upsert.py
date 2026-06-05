@@ -1,11 +1,13 @@
-from api.app import create_app
+from api.database import MoodDatabase
+from api.services.user_service import UserService
+
+TEST_DB = "/tmp/nightlio_test_user_upsert.db"
 
 
 def test_handle_oauth_login_idempotent():
-    app = create_app("testing")
-    user_service = app.extensions["user_service"]
+    db = MoodDatabase(TEST_DB)
+    user_service = UserService(db)
 
-    # Simulate Google identity payload
     provider = "google"
     sub = "test-google-sub-123"
     email = "user@example.com"

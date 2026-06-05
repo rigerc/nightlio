@@ -1,66 +1,45 @@
-#!/usr/bin/env python3
-"""
-Simple test script to verify the refactored API works
-"""
-import requests
-import sys
+from fastapi.testclient import TestClient
+from api.main import create_app
 
-BASE_URL = "http://localhost:5000/api"
+TEST_DB = "/tmp/nightlio_test_app.db"
 
 
-def test_api():
-    print("Testing refactored API...")
-    
-    # 1. Authenticate
-    print("1. Authenticating...")
-    try:
-        auth_response = requests.post(f"{BASE_URL}/auth/local/login")
-        if auth_response.status_code == 200:
-            token = auth_response.json().get("token")
-            print("✅ Authentication successful")
-            headers = {"Authorization": f"Bearer {token}"}
-        else:
-            print(f"❌ Authentication failed: {auth_response.text}")
-            sys.exit(1)
-    except Exception as e:
-        print(f"❌ Authentication error: {e}")
-        sys.exit(1)
-
-    # 2. Test time endpoint (Public)
-    print("\n2. Testing time endpoint (Public)...")
-    try:
-        response = requests.get(f"{BASE_URL}/time")
-        if response.status_code == 200:
-            print("✅ Time endpoint working")
-        else:
-            print(f"❌ Time endpoint failed: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Time endpoint error: {e}")
-
-    # 3. Test groups endpoint (Public)
-    print("\n3. Testing groups endpoint (Public)...")
-    try:
-        response = requests.get(f"{BASE_URL}/groups")
-        if response.status_code == 200:
-            groups = response.json()
-            print(f"✅ Groups endpoint working - found {len(groups)} groups")
-        else:
-            print(f"❌ Groups endpoint failed: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Groups endpoint error: {e}")
-
-    # 4. Test moods endpoint (Protected)
-    print("\n4. Testing moods endpoint (Protected)...")
-    try:
-        response = requests.get(f"{BASE_URL}/moods", headers=headers)
-        if response.status_code == 200:
-            moods = response.json()
-            print(f"✅ Moods endpoint working - found {len(moods)} entries")
-        else:
-            print(f"❌ Moods endpoint failed: {response.status_code} - {response.text}")
-    except Exception as e:
-        print(f"❌ Moods endpoint error: {e}")
+def _client():
+    return TestClient(create_app(db_path=TEST_DB))
 
 
-if __name__ == "__main__":
-    test_api()
+def test_health_check():
+    client = _client()
+    resp = client.get("/api/")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "healthy"
+
+
+def test_time_endpoint():
+    client = _client()
+    resp = client.get("/api/time")
+    assert resp.status_code == 200
+    assert "time" in resp.json()
+
+
+def test_groups_endpoint():
+    client = _client()
+    resp = client.get("/api/groups")
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+
+def test_moods_endpoint_requires_auth():
+    client = _client()
+    resp = client.get("/api/moods")
+    assert resp.status_code in (401, 403)
+
+
+def test_moods_endpoint_with_auth():
+    client = _client()
+    login = client.post("/api/auth/local/login")
+    token = login.json()["token"]
+    resp = client.get("/api/moods", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)

@@ -24,10 +24,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { config, loading: configLoading } = useConfig();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('nightlio_token'));
+  const [token, setToken] = useState<string | null>(localStorage.getItem('waymark_token'));
 
   const logout = useCallback(() => {
-    localStorage.removeItem('nightlio_token');
+    localStorage.removeItem('waymark_token');
     setToken(null);
     setUser(null);
     apiService.setAuthToken('');
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await apiService.localLogin();
       const { token: jwtToken, user: userData } = response;
       if (jwtToken) {
-        localStorage.setItem('nightlio_token', jwtToken);
+        localStorage.setItem('waymark_token', jwtToken);
         setToken(jwtToken);
         setUser(userData);
         apiService.setAuthToken(jwtToken);
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const response = await apiService.googleAuth(googleToken);
       const { token: jwtToken, user: userData } = response;
-      localStorage.setItem('nightlio_token', jwtToken);
+      localStorage.setItem('waymark_token', jwtToken);
       setToken(jwtToken);
       setUser(userData);
       apiService.setAuthToken(jwtToken);

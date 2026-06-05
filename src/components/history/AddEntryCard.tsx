@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 
 const AddEntryCard = () => {
   const handleAdd = () => {
-    window.dispatchEvent(new CustomEvent('nightlio:new-entry'));
+    window.dispatchEvent(new CustomEvent('waymark:new-entry'));
   };
   return (
     <div

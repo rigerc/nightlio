@@ -30,7 +30,7 @@ const LandingPage = () => {
     <div className="landing">
       <header className="landing__hero">
         <nav className="landing__nav">
-          <Link className="landing__brand" to="/"><img src="/logo.png" alt="Nightlio logo" className="landing__brand-mark" /><span className="landing__brand-name">Nightlio</span></Link>
+          <Link className="landing__brand" to="/"><img src="/logo.png" alt="Waymark logo" className="landing__brand-mark" /><span className="landing__brand-name">Waymark</span></Link>
           <div className="landing__nav-links"><a href="#features">Features</a><Link to="/about">About</Link></div>
           <div className="landing__nav-actions">
             <a className="landing__button landing__button--icon" href="https://github.com/shirsakm/nightlio" target="_blank" rel="noreferrer" aria-label="GitHub"><GithubIcon /></a>
@@ -98,7 +98,7 @@ const LandingPage = () => {
       </section>
 
       <footer className="landing__footer">
-        <p className="landing__footer-note">© 2025 Nightlio. Open source and privacy-first.</p>
+        <p className="landing__footer-note">© 2025 Waymark. Open source and privacy-first.</p>
         <div className="landing__footer-links">
           <Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><a href="mailto:hello@nightlio.com">Contact</a>
         </div>

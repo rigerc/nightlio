@@ -8,8 +8,8 @@ const AboutPage = () => {
       <header className="landing__hero" style={{ paddingBottom: 0 }}>
         <nav className="landing__nav">
           <Link to="/" className="landing__brand">
-            <img src="/logo.png" alt="Nightlio logo" className="landing__brand-mark" />
-            <span className="landing__brand-name">Nightlio</span>
+            <img src="/logo.png" alt="Waymark logo" className="landing__brand-mark" />
+            <span className="landing__brand-name">Waymark</span>
           </Link>
           <div className="landing__nav-links">
             <a href="#features">Features</a>
@@ -32,24 +32,24 @@ const AboutPage = () => {
 
       <main className="about__content">
         <header className="about__header">
-          <h1>The Story of Nightlio</h1>
+          <h1>The Story of Waymark</h1>
           <p className="about__subtitle">From a personal frustration to an award-winning open source project.</p>
         </header>
 
         <section className="about__section">
           <h2>How it Started</h2>
           <p>I recently started keeping track of my daily moods and decided to start journaling alongside it. After some research, one of the most used apps for mood logging seemed to be Daylio, so I downloaded it. Turns out, it's truly a great app, and it's truly great at shilling its subscription.</p>
-          <p>I got annoyed, and decided I would just make a FOSS (Free and Open Source Software) alternative for my personal use instead. And here I am, presenting to you ✨ Nightlio ✨.</p>
+          <p>I got annoyed, and decided I would just make a FOSS (Free and Open Source Software) alternative for my personal use instead. And here I am, presenting to you ✨ Waymark ✨.</p>
           <p>My goal was simple: create a privacy-first, self-hosted mood tracker that doesn't lock features behind a paywall or sell your data.</p>
         </section>
 
         <section className="about__section">
           <h2>Building in the Open</h2>
-          <p>I shared the initial project with the self-hosted community and received incredible feedback. Nightlio is designed from the ground up to be easily self-hosted.</p>
+          <p>I shared the initial project with the self-hosted community and received incredible feedback. Waymark is designed from the ground up to be easily self-hosted.</p>
           <p>Since the initial release, I've been hard at work:</p>
           <ul>
             <li><strong>Docker Support:</strong> The most requested feature is now live, allowing you to spin up an instance in minutes.</li>
-            <li><strong>Desktop-First UI:</strong> Unlike mobile-only apps, Nightlio features a layout optimized for desktop use.</li>
+            <li><strong>Desktop-First UI:</strong> Unlike mobile-only apps, Waymark features a layout optimized for desktop use.</li>
             <li><strong>Dark Theme:</strong> Because every developer tool needs a dark mode.</li>
           </ul>
         </section>
@@ -59,18 +59,18 @@ const AboutPage = () => {
           <div className="about__highlight">
             <p><strong>Update:</strong> We won the "For the Love of Code" hackathon hosted by GitHub! 🏆</p>
           </div>
-          <p>Despite balancing this project with academics, Nightlio has continued to grow. We've added Google OAuth support for self-hosted users, implemented Daily Goals, and made significant quality-of-life improvements.</p>
+          <p>Despite balancing this project with academics, Waymark has continued to grow. We've added Google OAuth support for self-hosted users, implemented Daily Goals, and made significant quality-of-life improvements.</p>
         </section>
 
         <section className="about__section">
           <h2>Our Philosophy</h2>
-          <p>Nightlio is built for mindful teams and solo creators. It's a mood logger and journal that won't suck your data and soul. It is, and always will be, free and open source.</p>
+          <p>Waymark is built for mindful teams and solo creators. It's a mood logger and journal that won't suck your data and soul. It is, and always will be, free and open source.</p>
           <p>If you find this project useful, please consider leaving a star on the <a href="https://github.com/shirsakm/nightlio">GitHub repo</a>—it really helps new users trust lesser-known projects.</p>
         </section>
       </main>
 
       <footer className="landing__footer">
-        <p className="landing__footer-note">© 2025 Nightlio. Open source and privacy-first.</p>
+        <p className="landing__footer-note">© 2025 Waymark. Open source and privacy-first.</p>
         <div className="landing__footer-links">
           <Link to="/privacy">Privacy</Link>
           <Link to="/terms">Terms</Link>

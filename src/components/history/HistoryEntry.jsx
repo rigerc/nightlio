@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { getMoodIcon } from '../../utils/moodUtils';
+import { usePreferences } from '../../contexts/PreferencesContext';
+import { getIconComponent } from '../../utils/iconRegistry';
 import apiService from '../../services/api';
 import { useToast } from '../ui/ToastProvider';
 import EntryModal from './EntryModal';
 
 const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }) => {
-  const { icon: IconComponent, color } = getMoodIcon(entry.mood);
+  const { getMoodIconComponent } = usePreferences();
+  const MoodIconComponent = getMoodIconComponent(entry.mood);
+  const { color } = getMoodIcon(entry.mood);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [open, setOpen] = useState(false);
@@ -96,7 +100,7 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }) => {
       {/* Header: mood icon + date • time */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
   <span style={{ color, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-bg-softer)', border: '1px solid var(--border)' }}>
-          <IconComponent size={18} strokeWidth={1.8} />
+          <MoodIconComponent size={18} strokeWidth={1.8} />
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700, color: 'var(--text)' }}>{entry.date}</span>
@@ -121,9 +125,21 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }) => {
       {entry.selections && entry.selections.length > 0 && (
         <div style={{ marginTop: '0.75rem' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {entry.selections.map(selection => (
-              <span key={selection.id} className="tag">{selection.name}</span>
-            ))}
+            {entry.selections.map(selection => {
+              const IconComp = selection.icon ? getIconComponent(selection.icon) : null;
+              const bg = selection.group_color ? selection.group_color + '18' : undefined;
+              const border = selection.group_color ? selection.group_color + '50' : undefined;
+              return (
+                <span
+                  key={selection.id}
+                  className="tag"
+                  style={bg ? { backgroundColor: bg, borderColor: border, borderWidth: 1, borderStyle: 'solid' } : {}}
+                >
+                  {IconComp && <IconComp size={11} strokeWidth={1.5} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />}
+                  {selection.name}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 try:  # pragma: no cover - enable script execution fallback
     from .database_common import DatabaseConnectionMixin
@@ -17,16 +17,18 @@ class GroupsMixin(DatabaseConnectionMixin):
     def get_all_groups(self) -> List[Dict]:
         with self._connect() as conn:
             conn.row_factory = sqlite3.Row
-            cursor = conn.execute("SELECT id, name FROM groups ORDER BY name")
+            cursor = conn.execute(
+                "SELECT id, name, color, icon, sort_order FROM groups ORDER BY sort_order ASC, name ASC"
+            )
             groups: List[Dict] = []
             for group_row in cursor.fetchall():
                 group = dict(group_row)
                 options_cursor = conn.execute(
                     """
-                    SELECT id, name
+                    SELECT id, name, icon, sort_order
                       FROM group_options
                      WHERE group_id = ?
-                     ORDER BY name
+                     ORDER BY sort_order ASC, name ASC
                     """,
                     (group["id"],),
                 )
@@ -50,6 +52,50 @@ class GroupsMixin(DatabaseConnectionMixin):
             )
             conn.commit()
             return int(cursor.lastrowid or 0)
+
+    def update_group(self, group_id: int, fields: Dict[str, Any]) -> bool:
+        allowed = {"name", "color", "icon", "sort_order"}
+        updates = {k: v for k, v in fields.items() if k in allowed}
+        if not updates:
+            return False
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [group_id]
+        with self._connect() as conn:
+            cursor = conn.execute(
+                f"UPDATE groups SET {set_clause} WHERE id = ?", values
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def update_group_option(self, option_id: int, fields: Dict[str, Any]) -> bool:
+        allowed = {"name", "icon", "sort_order"}
+        updates = {k: v for k, v in fields.items() if k in allowed}
+        if not updates:
+            return False
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [option_id]
+        with self._connect() as conn:
+            cursor = conn.execute(
+                f"UPDATE group_options SET {set_clause} WHERE id = ?", values
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def reorder_groups(self, ordered_ids: List[int]) -> None:
+        with self._connect() as conn:
+            conn.executemany(
+                "UPDATE groups SET sort_order = ? WHERE id = ?",
+                [(i, gid) for i, gid in enumerate(ordered_ids)],
+            )
+            conn.commit()
+
+    def reorder_group_options(self, group_id: int, ordered_ids: List[int]) -> None:
+        with self._connect() as conn:
+            conn.executemany(
+                "UPDATE group_options SET sort_order = ? WHERE id = ? AND group_id = ?",
+                [(i, oid, group_id) for i, oid in enumerate(ordered_ids)],
+            )
+            conn.commit()
 
     def delete_group(self, group_id: int) -> bool:
         with self._connect() as conn:
@@ -79,12 +125,12 @@ class GroupsMixin(DatabaseConnectionMixin):
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
                 """
-                SELECT go.id, go.name, g.name as group_name
+                SELECT go.id, go.name, go.icon, g.name as group_name, g.color as group_color
                   FROM entry_selections es
                   JOIN group_options go ON es.option_id = go.id
                   JOIN groups g ON go.group_id = g.id
                  WHERE es.entry_id = ?
-                 ORDER BY g.name, go.name
+                 ORDER BY g.sort_order ASC, g.name, go.sort_order ASC, go.name
                 """,
                 (entry_id,),
             )

@@ -1,10 +1,13 @@
 import { MOODS } from '../../utils/moodUtils';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 const MoodDisplay = ({ moodValue, size = 32, showLabel = true, children = null }) => {
   const mood = MOODS.find(m => m.value === moodValue);
+  const { getMoodIconComponent } = usePreferences();
+
   if (!mood) return null;
 
-  const IconComponent = mood.icon;
+  const IconComponent = getMoodIconComponent(moodValue);
   const isIconOnly = !showLabel;
 
   return (

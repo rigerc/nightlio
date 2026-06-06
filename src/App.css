@@ -132,7 +132,7 @@
 .entry-card:focus-visible { outline: 2px solid var(--accent-600); outline-offset: 2px; }
 .entry-card .timestamp { color: color-mix(in oklab, var(--text), transparent 20%); font-size: 0.9rem; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--space-2); }
-.tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-pill); font-size: 0.875rem; line-height: 1; background: var(--accent-chip-bg); color: var(--accent-700); border: 1px solid color-mix(in oklab, var(--accent-600), transparent 45%); }
+.tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-pill); font-size: 0.875rem; font-weight: 400; line-height: 1; background: var(--accent-chip-bg); color: var(--accent-700); border: 1px solid color-mix(in oklab, var(--accent-600), transparent 45%); }
 html[data-theme="dark"] .tag { color: #fff; }
 .tag--neutral { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 

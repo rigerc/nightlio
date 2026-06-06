@@ -36,7 +36,7 @@ const AppContent = () => {
 
   const { pastEntries, setPastEntries, loading: historyLoading, error: historyError, refreshHistory } = useMoodData();
   const [searchResults, setSearchResults] = useState<Entry[] | null>(null);
-  const { groups, createGroup, createGroupOption } = useGroups();
+  const { groups } = useGroups();
   const { statistics, currentStreak, loading: statsLoading, error: statsError, loadStatistics } = useStatistics();
 
   const handleMoodSelect = (moodValue: MoodValue) => {
@@ -151,8 +151,6 @@ const AppContent = () => {
                     groups={groups}
                     onBack={handleBackToHistory}
                     onEntryDeleted={handleEntryDeleted}
-                    onCreateGroup={createGroup}
-                    onCreateOption={createGroupOption}
                     editingEntry={editingEntry}
                     onEntryUpdated={handleEntryUpdated}
                     onEditMoodSelect={handleEditMoodSelect}

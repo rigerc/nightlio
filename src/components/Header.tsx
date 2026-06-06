@@ -84,7 +84,7 @@ const Header = ({ currentStreak, pastEntries, onSearch, showSearch = true }: Hea
 
         {showSearch && (
           <div className="flex-1 flex justify-center order-3 md:order-2 w-full md:w-auto">
-            <div className="w-full max-w-[600px]">
+            <div className="w-full max-w-[380px]">
               <SearchBar
                 entries={pastEntries}
                 onSearch={onSearch}

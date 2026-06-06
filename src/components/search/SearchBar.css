@@ -1,14 +1,14 @@
 .search-bar-container {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
 }
 
 .search-bar-input-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 10px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -31,7 +31,7 @@
   background: transparent;
   color: var(--text);
   font-size: 14px;
-  padding: 10px 0;
+  padding: 7px 0;
   outline: none;
   font-family: inherit;
 }

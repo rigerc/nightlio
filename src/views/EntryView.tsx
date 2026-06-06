@@ -22,6 +22,20 @@ import type { MoodValue, Entry, Group, Selection } from '../types';
 
 const DEFAULT_MARKDOWN = '';
 const DEFAULT_MARKDOWN_TRIMMED = DEFAULT_MARKDOWN.trim();
+
+const dateToInputValue = (displayDate: string): string => {
+  const d = new Date(displayDate);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const inputValueToDisplayDate = (isoDate: string): string => {
+  const [y, mo, d] = isoDate.split('-').map(Number);
+  return new Date(y, mo - 1, d).toLocaleDateString();
+};
 const AUTOSAVE_DEBOUNCE_MS = 1200;
 
 type SaveState = 'idle' | 'saving' | 'dirty' | 'error' | 'saved' | 'disabled';
@@ -93,6 +107,9 @@ const EntryView = ({
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [saveErrorMessage, setSaveErrorMessage] = useState('');
+  const [entryDateInput, setEntryDateInput] = useState<string>(() =>
+    editingEntry ? dateToInputValue(editingEntry.date) : ''
+  );
 
   const markdownRef = useRef<MarkdownAreaRef | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -130,6 +147,7 @@ const EntryView = ({
       setSelectedOptions(selectionIds);
       setActiveEntryId(editingEntry.id);
       setMarkdownContent(content);
+      setEntryDateInput(dateToInputValue(editingEntry.date));
 
       isHydratingEditorRef.current = true;
       const instance = markdownRef.current?.getInstance?.();
@@ -396,6 +414,20 @@ const EntryView = ({
     setMarkdownContent(nextMarkdown || '');
   };
 
+  const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newInput = e.target.value;
+    setEntryDateInput(newInput);
+    if (!newInput || !activeEntryIdRef.current) return;
+    const newDisplayDate = inputValueToDisplayDate(newInput);
+    try {
+      await apiService.updateMoodEntry(activeEntryIdRef.current, { date: newDisplayDate });
+      onEntryUpdated({ id: activeEntryIdRef.current, date: newDisplayDate }, { navigateAfterSave: false, refreshAfterSave: false });
+      show('Date updated', 'success');
+    } catch {
+      show('Failed to update date', 'error');
+    }
+  };
+
   const resetDraftComposer = () => {
     isHydratingEditorRef.current = true;
     markdownRef.current?.getInstance?.()?.setMarkdown(DEFAULT_MARKDOWN);
@@ -477,9 +509,27 @@ const EntryView = ({
             <div style={{
               marginBottom: '0.75rem',
               fontSize: '0.85rem',
-              color: 'color-mix(in oklab, var(--text), transparent 40%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              flexWrap: 'wrap',
             }}>
-              Editing entry from <strong style={{ color: 'var(--text)' }}>{editingEntry.date}</strong>
+              <span style={{ color: 'color-mix(in oklab, var(--text), transparent 40%)' }}>Entry date:</span>
+              <input
+                type="date"
+                value={entryDateInput}
+                onChange={handleDateChange}
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  padding: '2px 6px',
+                  fontSize: '0.85rem',
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              />
             </div>
           )}
           <div style={{ marginBottom: '1rem' }}>

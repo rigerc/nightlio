@@ -31,9 +31,7 @@ import {
 } from '@mdxeditor/editor';
 import '@mdxeditor/editor/style.css';
 
-const DEFAULT_MARKDOWN = `# How was your day?
-
-Write about your thoughts, feelings, and experiences...`;
+const DEFAULT_MARKDOWN = '';
 
 export interface MarkdownAreaRef {
   getMarkdown: () => string;
@@ -70,7 +68,7 @@ const MarkdownArea = forwardRef<MarkdownAreaRef, MarkdownAreaProps>(({ initialMa
       </style>
       <MDXEditor
         ref={editorRef}
-        markdown={initialMarkdown || DEFAULT_MARKDOWN}
+        markdown={initialMarkdown ?? DEFAULT_MARKDOWN}
         onChange={onChange}
         contentEditableClassName="prose"
         plugins={[

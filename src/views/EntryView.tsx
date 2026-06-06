@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import MoodPicker from '../components/mood/MoodPicker';
 import MoodDisplay from '../components/mood/MoodDisplay';
+import MoodLogList from '../components/mood/MoodLogList';
 import GroupSelector from '../components/groups/GroupSelector';
 import MDArea from '../components/MarkdownArea';
 import type { MarkdownAreaRef } from '../components/MarkdownArea';
@@ -96,7 +97,6 @@ const EntryView = ({
   const initialSelectionIds = editingEntry?.selections?.map((s) => s.id) ?? [];
 
   const [selectedOptions, setSelectedOptions] = useState<number[]>(initialSelectionIds);
-  const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [markdownContent, setMarkdownContent] = useState(editingEntry?.content || DEFAULT_MARKDOWN);
   const [activeEntryId, setActiveEntryId] = useState<number | null>(editingEntry?.id ?? null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -185,11 +185,6 @@ const EntryView = ({
     setSaveErrorMessage('');
   }, [isEditing, editingEntry, isBurnerMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!isEditing) {
-      setShowMoodPicker(false);
-    }
-  }, [isEditing]);
 
   useEffect(() => {
     if (isBurnerMode) {
@@ -398,7 +393,6 @@ const EntryView = ({
   const handleMoodSelection = (moodValue: MoodValue) => {
     if (isEditing) {
       onEditMoodSelect?.(moodValue);
-      setShowMoodPicker(false);
     } else {
       onSelectMood(moodValue);
     }
@@ -430,7 +424,6 @@ const EntryView = ({
 
     setMarkdownContent(DEFAULT_MARKDOWN);
     setSelectedOptions([]);
-    setShowMoodPicker(false);
     setSaveErrorMessage('');
     setSaveState('disabled');
 
@@ -549,58 +542,12 @@ const EntryView = ({
                 </div>
               </div>
             </MoodDisplay>
-            {isEditing && (
-              <button
-                type="button"
-                onClick={() => setShowMoodPicker(true)}
-                style={{
-                  marginTop: '0.75rem',
-                  padding: '0.4rem 0.9rem',
-                  borderRadius: '999px',
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                Change mood
-              </button>
-            )}
           </div>
-          {isEditing && showMoodPicker && (
-            <div style={{
-              marginBottom: '1rem',
-              padding: '1rem',
-              borderRadius: '16px',
-              border: '1px solid var(--border)',
-              background: 'var(--surface)',
-              boxShadow: 'var(--shadow-sm)',
-            }}>
-              <p style={{ marginTop: 0, marginBottom: '0.75rem', fontWeight: 600, color: 'var(--text)' }}>
-                Pick a new mood
-              </p>
-              <MoodPicker onMoodSelect={handleMoodSelection} />
-              <div style={{ marginTop: '0.75rem', textAlign: 'right' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowMoodPicker(false)}
-                  style={{
-                    padding: '0.35rem 0.85rem',
-                    borderRadius: '999px',
-                    border: '1px solid var(--border)',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontSize: '0.85rem',
-                    color: 'color-mix(in oklab, var(--text), transparent 30%)',
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+          {activeEntryId && (
+            <MoodLogList
+              entryId={activeEntryId}
+              onMoodUpdated={(newMood) => onEditMoodSelect?.(newMood)}
+            />
           )}
           <GroupSelector
             groups={groups}

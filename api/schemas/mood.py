@@ -37,3 +37,29 @@ class MoodUpdateResponse(BaseModel):
     status: str
     message: str
     entry: Any
+
+
+class MoodLogCreate(BaseModel):
+    mood: int = Field(ge=1, le=5)
+
+
+class MoodLogOut(BaseModel):
+    id: int
+    entry_id: int
+    mood: int
+    logged_at: str
+
+
+class MoodLogAddResponse(BaseModel):
+    status: str
+    log_id: int
+    mood: int
+    logged_at: Optional[str]
+    updated_entry_mood: int
+    message: str
+
+
+class MoodLogDeleteResponse(BaseModel):
+    status: str
+    updated_entry_mood: int
+    message: str

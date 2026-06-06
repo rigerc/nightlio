@@ -1,5 +1,12 @@
 export type MoodValue = 1 | 2 | 3 | 4 | 5;
 
+export interface MoodLog {
+  id: number;
+  entry_id: number;
+  mood: MoodValue;
+  logged_at: string;
+}
+
 export interface Selection {
   id: number;
   name: string;

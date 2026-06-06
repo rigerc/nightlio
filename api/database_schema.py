@@ -58,6 +58,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 # Core tables
                 self._create_users_table(conn)
                 self._create_mood_entries_table(conn)
+                self._create_entry_mood_logs_table(conn)
                 self._create_groups_table(conn)
                 self._create_group_options_table(conn)
                 self._create_entry_selections_table(conn)
@@ -80,6 +81,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 logger.info("Database initialization complete")
 
             self._insert_default_groups()
+            self._migrate_entry_mood_logs()
             self._migrate_groups_schema()
             self._migrate_group_options_schema()
             self._migrate_entry_selections_source()
@@ -124,6 +126,46 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             """
         )
         logger.info("Mood entries table ready")
+
+    def _create_entry_mood_logs_table(self, conn: sqlite3.Connection) -> None:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS entry_mood_logs (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                entry_id INTEGER NOT NULL,
+                mood     INTEGER NOT NULL CHECK (mood >= 1 AND mood <= 5),
+                logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (entry_id) REFERENCES mood_entries (id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_entry_mood_logs_entry ON entry_mood_logs(entry_id)"
+        )
+        logger.info("Entry mood logs table ready")
+
+    def _migrate_entry_mood_logs(self) -> None:
+        """Seed one mood log per existing entry that has no logs yet."""
+        try:
+            with self._connect() as conn:
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute(
+                    """
+                    SELECT me.id, me.mood, me.created_at
+                      FROM mood_entries me
+                      LEFT JOIN entry_mood_logs eml ON me.id = eml.entry_id
+                     WHERE eml.id IS NULL
+                    """
+                ).fetchall()
+                if rows:
+                    conn.executemany(
+                        "INSERT INTO entry_mood_logs (entry_id, mood, logged_at) VALUES (?, ?, ?)",
+                        [(r["id"], r["mood"], r["created_at"]) for r in rows],
+                    )
+                    conn.commit()
+                    logger.info("Seeded mood logs for %d existing entries", len(rows))
+        except Exception as exc:
+            logger.warning("Entry mood logs migration failed (non-critical): %s", exc)
 
     def _create_groups_table(self, conn: sqlite3.Connection) -> None:
         conn.execute(

@@ -4,7 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from api.config import get_config
 from api.services.mood_service import MoodService
 from api.dependencies import get_current_user_id
-from api.schemas.mood import MoodCreate, MoodUpdate, MoodCreateResponse, MoodUpdateResponse
+from api.schemas.mood import (
+    MoodCreate, MoodUpdate, MoodCreateResponse, MoodUpdateResponse,
+    MoodLogCreate, MoodLogAddResponse, MoodLogDeleteResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +155,57 @@ def create_mood_router(mood_service: MoodService, fitness_service=None) -> APIRo
     def get_entry_selections(entry_id: int, user_id: int = Depends(get_current_user_id)):
         try:
             return mood_service.get_entry_selections(user_id, entry_id)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.post("/mood/{entry_id}/logs", status_code=201, response_model=MoodLogAddResponse)
+    def add_mood_log(
+        entry_id: int,
+        body: MoodLogCreate,
+        user_id: int = Depends(get_current_user_id),
+    ):
+        try:
+            result = mood_service.add_mood_log(user_id, entry_id, body.mood)
+            return {
+                "status": "success",
+                "log_id": result["log_id"],
+                "mood": result["mood"],
+                "logged_at": result["logged_at"],
+                "updated_entry_mood": result["updated_entry_mood"],
+                "message": "Mood log added",
+            }
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except Exception as e:
+            logger.error(f"Add mood log error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.get("/mood/{entry_id}/logs")
+    def get_mood_logs(entry_id: int, user_id: int = Depends(get_current_user_id)):
+        try:
+            return mood_service.get_mood_logs(user_id, entry_id)
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.delete("/mood/{entry_id}/logs/{log_id}", response_model=MoodLogDeleteResponse)
+    def delete_mood_log(
+        entry_id: int,
+        log_id: int,
+        user_id: int = Depends(get_current_user_id),
+    ):
+        try:
+            result = mood_service.delete_mood_log(user_id, entry_id, log_id)
+            if result is None:
+                raise HTTPException(status_code=404, detail="Log not found")
+            return {
+                "status": "success",
+                "updated_entry_mood": result["updated_entry_mood"],
+                "message": "Mood log deleted",
+            }
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 

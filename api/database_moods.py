@@ -14,6 +14,20 @@ except ImportError:  # pragma: no cover
 class MoodEntriesMixin(DatabaseConnectionMixin):
     """CRUD helpers for mood entries and their selections."""
 
+    def _recalculate_average_mood(self, conn: sqlite3.Connection, entry_id: int) -> None:
+        """Rewrite mood_entries.mood as ROUND(AVG) of entry_mood_logs. No-op when no logs."""
+        row = conn.execute(
+            "SELECT ROUND(AVG(mood)) FROM entry_mood_logs WHERE entry_id = ?",
+            (entry_id,),
+        ).fetchone()
+        avg = row[0] if row else None
+        if avg is None:
+            return
+        conn.execute(
+            "UPDATE mood_entries SET mood = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (int(avg), entry_id),
+        )
+
     def add_mood_entry(
         self,
         user_id: int,
@@ -49,8 +63,93 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
                     [(entry_id, option_id) for option_id in selected_options],
                 )
 
+            # Create the first mood log so future logs produce correct averages
+            if time:
+                conn.execute(
+                    "INSERT INTO entry_mood_logs (entry_id, mood, logged_at) VALUES (?, ?, ?)",
+                    (entry_id, mood, time),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO entry_mood_logs (entry_id, mood) VALUES (?, ?)",
+                    (entry_id, mood),
+                )
+
             conn.commit()
             return int(entry_id if entry_id is not None else 0)
+
+    def add_mood_log(self, user_id: int, entry_id: int, mood: int) -> Dict:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT id FROM mood_entries WHERE id = ? AND user_id = ?",
+                (entry_id, user_id),
+            ).fetchone()
+            if not row:
+                raise ValueError("Entry not found")
+            cursor = conn.execute(
+                "INSERT INTO entry_mood_logs (entry_id, mood) VALUES (?, ?)",
+                (entry_id, mood),
+            )
+            log_id = int(cursor.lastrowid)
+            self._recalculate_average_mood(conn, entry_id)
+            conn.commit()
+            log_row = conn.execute(
+                "SELECT id, mood, logged_at FROM entry_mood_logs WHERE id = ?",
+                (log_id,),
+            ).fetchone()
+            entry_row = conn.execute(
+                "SELECT mood FROM mood_entries WHERE id = ?",
+                (entry_id,),
+            ).fetchone()
+            return {
+                "log_id": log_id,
+                "mood": log_row[1] if log_row else mood,
+                "logged_at": log_row[2] if log_row else None,
+                "updated_entry_mood": entry_row[0] if entry_row else mood,
+            }
+
+    def get_mood_logs(self, user_id: int, entry_id: int) -> List[Dict]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT id FROM mood_entries WHERE id = ? AND user_id = ?",
+                (entry_id, user_id),
+            ).fetchone()
+            if not row:
+                raise ValueError("Entry not found")
+            cursor = conn.execute(
+                """
+                SELECT id, entry_id, mood, logged_at
+                  FROM entry_mood_logs
+                 WHERE entry_id = ?
+                 ORDER BY logged_at ASC
+                """,
+                (entry_id,),
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    def delete_mood_log(self, user_id: int, entry_id: int, log_id: int) -> Optional[int]:
+        """Delete a mood log and return the updated entry mood, or None if not found."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT id FROM mood_entries WHERE id = ? AND user_id = ?",
+                (entry_id, user_id),
+            ).fetchone()
+            if not row:
+                return None
+            cursor = conn.execute(
+                "DELETE FROM entry_mood_logs WHERE id = ? AND entry_id = ?",
+                (log_id, entry_id),
+            )
+            if cursor.rowcount == 0:
+                return None
+            self._recalculate_average_mood(conn, entry_id)
+            conn.commit()
+            entry_row = conn.execute(
+                "SELECT mood FROM mood_entries WHERE id = ?",
+                (entry_id,),
+            ).fetchone()
+            return entry_row[0] if entry_row else None
 
     def get_all_mood_entries(self, user_id: int) -> List[Dict]:
         with self._connect() as conn:

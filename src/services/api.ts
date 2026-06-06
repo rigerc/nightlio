@@ -1,6 +1,6 @@
 import type {
   AppConfig, AuthResponse, Entry, Goal, GoalCompletion, Group,
-  MoodCreateResponse, MoodUpdateResponse, Selection, Statistics, Achievement,
+  MoodCreateResponse, MoodUpdateResponse, MoodLog, Selection, Statistics, Achievement,
 } from '../types';
 
 function normalizeBaseUrl(raw: string | undefined): string {
@@ -215,6 +215,27 @@ class ApiService {
 
   getEntrySelections(entryId: number): Promise<Selection[]> {
     return this.request<Selection[]>(`/api/mood/${entryId}/selections`);
+  }
+
+  getMoodLogs(entryId: number): Promise<MoodLog[]> {
+    return this.request<MoodLog[]>(`/api/mood/${entryId}/logs`);
+  }
+
+  addMoodLog(
+    entryId: number,
+    data: { mood: number },
+  ): Promise<{ status: string; log_id: number; mood: number; logged_at: string | null; updated_entry_mood: number; message: string }> {
+    return this.request(`/api/mood/${entryId}/logs`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  deleteMoodLog(
+    entryId: number,
+    logId: number,
+  ): Promise<{ status: string; updated_entry_mood: number; message: string }> {
+    return this.request(`/api/mood/${entryId}/logs/${logId}`, { method: 'DELETE' });
   }
 
   getMoodIconPreferences(): Promise<{ icons: Record<string, string> }> {

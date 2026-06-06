@@ -84,6 +84,23 @@ class MoodService:
         entry["selections"] = selections
         return entry
 
+    def add_mood_log(self, user_id: int, entry_id: int, mood: int) -> Dict:
+        """Add a mood check-in log to an entry and return the updated mood."""
+        if not (1 <= mood <= 5):
+            raise ValueError("Mood must be between 1 and 5")
+        return self.db.add_mood_log(user_id, entry_id, mood)
+
+    def get_mood_logs(self, user_id: int, entry_id: int) -> List[Dict]:
+        """Return all mood logs for an entry, ordered chronologically."""
+        return self.db.get_mood_logs(user_id, entry_id)
+
+    def delete_mood_log(self, user_id: int, entry_id: int, log_id: int) -> Optional[Dict]:
+        """Delete a mood log and return the updated entry mood, or None if not found."""
+        new_mood = self.db.delete_mood_log(user_id, entry_id, log_id)
+        if new_mood is None:
+            return None
+        return {"updated_entry_mood": new_mood}
+
     def delete_entry(self, user_id: int, entry_id: int) -> bool:
         """Delete a mood entry for a user"""
         return self.db.delete_mood_entry(user_id, entry_id)

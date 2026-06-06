@@ -18,7 +18,8 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: (globalThis && globalThis.process && globalThis.process.env && globalThis.process.env.VITE_API_URL) || 'http://localhost:5000',
+        // Hono worker dev server on 8787; fallback to old FastAPI on 5000
+        target: (globalThis && globalThis.process && globalThis.process.env && globalThis.process.env.VITE_API_URL) || 'http://localhost:8787',
         changeOrigin: true,
       },
     },

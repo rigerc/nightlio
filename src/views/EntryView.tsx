@@ -20,9 +20,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { useBurner } from '../contexts/BurnerContext';
 import type { MoodValue, Entry, Group, Selection } from '../types';
 
-const DEFAULT_MARKDOWN = `# How was your day?
-
-Write about your thoughts, feelings, and experiences...`;
+const DEFAULT_MARKDOWN = '';
 const DEFAULT_MARKDOWN_TRIMMED = DEFAULT_MARKDOWN.trim();
 const AUTOSAVE_DEBOUNCE_MS = 1200;
 

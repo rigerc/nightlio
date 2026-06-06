@@ -1,0 +1,23 @@
+name = "waymark-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "waymark"
+# Replace with the ID printed by: wrangler d1 create waymark
+database_id = "placeholder-replace-with-wrangler-d1-create-output"
+
+[vars]
+ENABLE_GOOGLE_OAUTH = "false"
+DEFAULT_SELF_HOST_ID = "selfhost_default_user"
+SELFHOST_USER_NAME = "Me"
+# Comma-separated allowed origins for CORS
+CORS_ORIGINS = "http://localhost:5173"
+
+# Secrets (set via `wrangler secret put <NAME>`):
+#   JWT_SECRET          — required
+#   GOOGLE_CLIENT_ID    — required if ENABLE_GOOGLE_OAUTH=true
+#   GOOGLE_CLIENT_SECRET
+#   SELFHOST_USER_EMAIL

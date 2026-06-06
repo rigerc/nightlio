@@ -13,6 +13,7 @@ try:  # pragma: no cover - fallback for script execution
         SQLQueries,
         logger,
     )
+    from .database_fitness import FitnessMixin
     from .database_goals import GoalsMixin
     from .database_groups import GroupsMixin
     from .database_moods import MoodEntriesMixin
@@ -27,6 +28,7 @@ except ImportError:  # pragma: no cover - executed when run as a script module
         SQLQueries,
         logger,
     )
+    from database_fitness import FitnessMixin  # type: ignore
     from database_goals import GoalsMixin  # type: ignore
     from database_groups import GroupsMixin  # type: ignore
     from database_moods import MoodEntriesMixin  # type: ignore
@@ -43,6 +45,7 @@ class MoodDatabase(
     GroupsMixin,
     UserPreferencesMixin,
     AchievementsMixin,
+    FitnessMixin,
 ):
     """High-level facade composing all database-related mixins."""
 
@@ -70,6 +73,7 @@ __all__ = [
     "MoodDatabase",
     "DatabaseConnectionMixin",
     "DatabaseError",
+    "FitnessMixin",
     "SQLQueries",
     "logger",
 ]

@@ -70,10 +70,23 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     achievement_service = AchievementService(db)
     preferences_service = PreferencesService(db)
 
+    fitness_service = None
+    if cfg.ENABLE_GOOGLE_HEALTH:
+        try:
+            from api.services.fitness_service import FitnessService
+            from api.routers.fitness import create_fitness_router
+            fitness_service = FitnessService(db)
+            app.include_router(create_fitness_router(fitness_service), prefix="/api")
+        except Exception as e:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                f"ENABLE_GOOGLE_HEALTH is true but fitness router unavailable: {e}"
+            )
+
     app.include_router(misc.router, prefix="/api")
     app.include_router(config_router.router, prefix="/api")
     app.include_router(create_auth_router(user_service), prefix="/api")
-    app.include_router(create_mood_router(mood_service), prefix="/api")
+    app.include_router(create_mood_router(mood_service, fitness_service=fitness_service), prefix="/api")
     app.include_router(create_goal_router(goal_service), prefix="/api")
     app.include_router(create_group_router(group_service), prefix="/api")
     app.include_router(create_achievement_router(achievement_service), prefix="/api")

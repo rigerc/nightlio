@@ -108,11 +108,17 @@ class ConfigData:
     # Feature flags
     ENABLE_GOOGLE_OAUTH: bool
     ENABLE_MOOD_MUSIC: bool
+    ENABLE_GOOGLE_HEALTH: bool
 
     # Google OAuth
     GOOGLE_CLIENT_ID: Optional[str]
     GOOGLE_CLIENT_SECRET: Optional[str]
     GOOGLE_CALLBACK_URL: Optional[str]
+
+    # Google Health API v4
+    GOOGLE_HEALTH_CLIENT_ID: Optional[str]
+    FRONTEND_URL: Optional[str]
+    FITNESS_TOKEN_KEY: Optional[str]
 
     # Web3 removed
 
@@ -137,6 +143,7 @@ def _load_config_from_env() -> ConfigData:
 
     enable_google = is_truthy(os.getenv("ENABLE_GOOGLE_OAUTH"))
     enable_mood_music = is_truthy(os.getenv("ENABLE_MOOD_MUSIC"))
+    enable_google_health = is_truthy(os.getenv("ENABLE_GOOGLE_HEALTH"))
     # Web3 removed
 
     # Secrets pulled from env; don't default to empty string.
@@ -157,9 +164,13 @@ def _load_config_from_env() -> ConfigData:
         PORT=port,
         ENABLE_GOOGLE_OAUTH=enable_google,
         ENABLE_MOOD_MUSIC=enable_mood_music,
+        ENABLE_GOOGLE_HEALTH=enable_google_health,
         GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID"),
         GOOGLE_CLIENT_SECRET=os.getenv("GOOGLE_CLIENT_SECRET"),
         GOOGLE_CALLBACK_URL=os.getenv("GOOGLE_CALLBACK_URL"),
+        GOOGLE_HEALTH_CLIENT_ID=os.getenv("GOOGLE_HEALTH_CLIENT_ID"),
+        FRONTEND_URL=os.getenv("FRONTEND_URL"),
+        FITNESS_TOKEN_KEY=os.getenv("FITNESS_TOKEN_KEY") or None,
         # Web3 fields removed
         JWT_SECRET=jwt_secret,
         DEFAULT_SELF_HOST_ID=os.getenv("DEFAULT_SELF_HOST_ID")
@@ -188,6 +199,9 @@ def config_to_public_dict(cfg: ConfigData) -> Dict[str, Any]:
     return {
         "enable_google_oauth": bool(cfg.ENABLE_GOOGLE_OAUTH),
         "enable_mood_music": bool(cfg.ENABLE_MOOD_MUSIC),
+        "enable_google_health": bool(cfg.ENABLE_GOOGLE_HEALTH),
         # Expose the Google Client ID so the frontend can initialize GSI correctly
         "google_client_id": cfg.GOOGLE_CLIENT_ID,
+        # Public client ID for PKCE OAuth (no secret)
+        "google_health_client_id": cfg.GOOGLE_HEALTH_CLIENT_ID,
     }

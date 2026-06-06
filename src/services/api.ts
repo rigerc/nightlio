@@ -76,6 +76,7 @@ class ApiService {
         }
         throw new Error(errorMessage);
       }
+      if (response.status === 204) return undefined as T;
       const ct = response.headers.get('content-type') || '';
       if (!ct.includes('application/json')) {
         const text = await response.text();

@@ -16,6 +16,7 @@ export interface Entry {
   created_at: string;
   updated_at?: string;
   selections: Selection[];
+  fitness?: FitnessDataPoint[];
 }
 
 export interface GroupOption {
@@ -75,7 +76,33 @@ export interface User {
 export interface AppConfig {
   enable_google_oauth: boolean;
   enable_mood_music: boolean;
+  enable_google_health: boolean;
   google_client_id?: string;
+  google_health_client_id?: string;
+}
+
+export type FitnessDataType =
+  | 'steps'
+  | 'sleep_minutes'
+  | 'heart_rate_avg'
+  | 'calories'
+  | 'active_minutes'
+  | 'workout';
+
+export interface FitnessDataPoint {
+  id: number;
+  data_type: FitnessDataType | string;
+  date: string;
+  value: number;
+  metadata?: Record<string, unknown> | null;
+  source_provider: string;
+  created_at: string;
+}
+
+export interface FitnessConnection {
+  connected: boolean;
+  provider: string | null;
+  last_synced_at: string | null;
 }
 
 export interface Achievement {

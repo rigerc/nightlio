@@ -1,10 +1,16 @@
 import { useConfig } from '../contexts/ConfigContext';
 import ActivityCustomizer from '../components/groups/ActivityCustomizer';
 import MoodIconCustomizer from '../components/settings/MoodIconCustomizer';
+import FitnessConnectSection from '../components/fitness/FitnessConnectSection';
+import { useFitnessData } from '../hooks/useFitnessData';
 import type { AppConfig } from '../types';
 
 const SettingsView = () => {
   const { config, loading } = useConfig();
+  const fitness = useFitnessData(
+    config.enable_google_health ?? false,
+    config.google_health_client_id,
+  );
 
   const featureFlags: Array<{ key: keyof AppConfig; label: string; description: string }> = [
     { key: 'enable_google_oauth', label: 'Google Login', description: 'Enable Google OAuth-based authentication.' },
@@ -25,6 +31,16 @@ const SettingsView = () => {
         <p className="mt-0 mb-0 text-[var(--text-muted)] text-sm">Reorder, colorize, and add icons to your activity categories. Click a name to edit it.</p>
         <ActivityCustomizer />
       </section>
+
+      {config.enable_google_health && (
+        <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Google Health connection">
+          <h3 className="mt-0 mb-1 text-[var(--text)]">Google Health</h3>
+          <p className="mt-0 mb-3 text-[var(--text-muted)] text-sm">
+            Sync fitness activity, steps, and sleep data to automatically enrich your mood entries.
+          </p>
+          <FitnessConnectSection fitness={fitness} />
+        </section>
+      )}
 
       <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Feature flags">
         <h3 className="mt-0 mb-2 text-[var(--text)]">Feature flags</h3>

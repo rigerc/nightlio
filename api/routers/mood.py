@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
+from api.config import get_config
 from api.services.mood_service import MoodService
 from api.dependencies import get_current_user_id
 from api.schemas.mood import MoodCreate, MoodUpdate, MoodCreateResponse, MoodUpdateResponse
@@ -8,7 +9,7 @@ from api.schemas.mood import MoodCreate, MoodUpdate, MoodCreateResponse, MoodUpd
 logger = logging.getLogger(__name__)
 
 
-def create_mood_router(mood_service: MoodService) -> APIRouter:
+def create_mood_router(mood_service: MoodService, fitness_service=None) -> APIRouter:
     router = APIRouter()
 
     @router.post("/mood", status_code=201, response_model=MoodCreateResponse)
@@ -37,6 +38,25 @@ def create_mood_router(mood_service: MoodService) -> APIRouter:
             logger.error(f"Create mood entry error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
+    def _enrich_with_fitness(entries, user_id: int):
+        """Attach fitness data to entries when Google Health is enabled."""
+        if not fitness_service:
+            return entries
+        try:
+            cfg = get_config()
+            if not cfg.ENABLE_GOOGLE_HEALTH:
+                return entries
+            dates = [e["date"] for e in entries] if isinstance(entries, list) else [entries["date"]]
+            fitness_by_date = fitness_service.get_data_for_dates(user_id, dates)
+            if isinstance(entries, list):
+                for entry in entries:
+                    entry["fitness"] = fitness_by_date.get(entry["date"], [])
+            else:
+                entries["fitness"] = fitness_by_date.get(entries["date"], [])
+        except Exception as exc:
+            logger.warning("Failed to attach fitness data: %s", exc)
+        return entries
+
     @router.get("/moods")
     def get_mood_entries(
         start_date: Optional[str] = None,
@@ -45,8 +65,10 @@ def create_mood_router(mood_service: MoodService) -> APIRouter:
     ):
         try:
             if start_date and end_date:
-                return mood_service.get_entries_by_date_range(user_id, start_date, end_date)
-            return mood_service.get_all_entries(user_id)
+                entries = mood_service.get_entries_by_date_range(user_id, start_date, end_date)
+            else:
+                entries = mood_service.get_all_entries(user_id)
+            return _enrich_with_fitness(entries, user_id)
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -56,7 +78,7 @@ def create_mood_router(mood_service: MoodService) -> APIRouter:
             entry = mood_service.get_entry_by_id(user_id, entry_id)
             if entry is None:
                 raise HTTPException(status_code=404, detail="Entry not found")
-            return entry
+            return _enrich_with_fitness(entry, user_id)
         except HTTPException:
             raise
         except Exception as e:

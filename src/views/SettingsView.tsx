@@ -1,15 +1,51 @@
 import { useState } from 'react';
 import { useConfig } from '../contexts/ConfigContext';
 import { usePreferences } from '../contexts/PreferencesContext';
+import { useTheme } from '../contexts/ThemeContext';
 import ActivityCustomizer from '../components/groups/ActivityCustomizer';
 import MoodIconCustomizer from '../components/settings/MoodIconCustomizer';
 import FitnessConnectSection from '../components/fitness/FitnessConnectSection';
 import { useFitnessData } from '../hooks/useFitnessData';
 import type { AppConfig } from '../types';
 
+interface ColorSchemeOption {
+  id: string;
+  name: string;
+  dark: { bg: string; surface: string; accent: string };
+  light: { bg: string; surface: string; accent: string };
+}
+
+const COLOR_SCHEMES: ColorSchemeOption[] = [
+  {
+    id: 'default',
+    name: 'Default',
+    dark:  { bg: '#282a36', surface: '#343746', accent: '#bd93f9' },
+    light: { bg: '#F7F8FB', surface: '#FFFFFF', accent: '#2F7E89' },
+  },
+  {
+    id: 'rose-pine',
+    name: 'Rosé Piné',
+    dark:  { bg: '#191724', surface: '#1f1d2e', accent: '#9ccfd8' },
+    light: { bg: '#faf4ed', surface: '#fffaf3', accent: '#286983' },
+  },
+  {
+    id: 'catppuccin',
+    name: 'Catppuccin',
+    dark:  { bg: '#1e1e2e', surface: '#313244', accent: '#89b4fa' },
+    light: { bg: '#eff1f5', surface: '#ffffff', accent: '#1e66f5' },
+  },
+  {
+    id: 'nord',
+    name: 'Nord',
+    dark:  { bg: '#2e3440', surface: '#3b4252', accent: '#88c0d0' },
+    light: { bg: '#eceff4', surface: '#e5e9f0', accent: '#5e81ac' },
+  },
+];
+
 const SettingsView = () => {
   const { config, loading } = useConfig();
   const { use24HourTime, updateUse24HourTime } = usePreferences();
+  const { colorScheme, setColorScheme } = useTheme();
   const [isSavingTimeFormat, setIsSavingTimeFormat] = useState(false);
   const [timeFormatError, setTimeFormatError] = useState('');
   const fitness = useFitnessData(
@@ -37,6 +73,60 @@ const SettingsView = () => {
   return (
     <div className="text-left">
       <h2 className="mt-0 text-[var(--text)]">Settings</h2>
+
+      <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Appearance settings">
+        <h3 className="mt-0 mb-1 text-[var(--text)]">Appearance</h3>
+        <p className="mt-0 mb-3 text-[var(--text-muted)] text-sm">Choose a color scheme. Use the theme toggle in the header to switch between light and dark mode.</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {COLOR_SCHEMES.map((scheme) => {
+            const isActive = colorScheme === scheme.id;
+            return (
+              <button
+                key={scheme.id}
+                type="button"
+                onClick={() => setColorScheme(scheme.id)}
+                aria-pressed={isActive}
+                aria-label={`${scheme.name} color scheme`}
+                style={{
+                  all: 'unset',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  padding: '10px',
+                  borderRadius: '12px',
+                  border: `2px solid ${isActive ? 'var(--accent-600)' : 'var(--border)'}`,
+                  background: isActive ? 'var(--accent-bg-softer)' : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderRadius: '7px', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.08)' }}>
+                  {/* Dark variant strip */}
+                  <div style={{ display: 'flex', height: '28px', background: scheme.dark.bg }}>
+                    <div style={{ flex: 1, background: scheme.dark.surface }} />
+                    <div style={{ width: '12px', background: scheme.dark.accent }} />
+                  </div>
+                  {/* Light variant strip */}
+                  <div style={{ display: 'flex', height: '28px', background: scheme.light.bg }}>
+                    <div style={{ flex: 1, background: scheme.light.surface }} />
+                    <div style={{ width: '12px', background: scheme.light.accent }} />
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: '0.8rem',
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? 'var(--accent-600)' : 'var(--text-muted)',
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                }}>
+                  {scheme.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Time display settings">
         <h3 className="mt-0 mb-1 text-[var(--text)]">Time display</h3>

@@ -1,6 +1,5 @@
 import type { Entry, Group } from '../../types';
 import HistoryEntry from './HistoryEntry';
-import AddEntryCard from './AddEntryCard';
 import Skeleton from '../ui/Skeleton';
 
 interface HistoryListProps {
@@ -36,8 +35,10 @@ const HistoryList = ({ entries, loading, error, onDelete, onEdit, groups = [] }:
 
   if (entries.length === 0) {
     return (
-      <div style={{ textAlign: 'left', marginTop: 0 }}>
-        <div className="card-grid"><AddEntryCard /></div>
+      <div style={{ textAlign: 'left', marginTop: '1rem', padding: '0.5rem 0' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>
+          Pick a mood above to write your first entry.
+        </p>
       </div>
     );
   }
@@ -45,7 +46,6 @@ const HistoryList = ({ entries, loading, error, onDelete, onEdit, groups = [] }:
   return (
     <div style={{ textAlign: 'left', marginTop: 0 }}>
       <div className="card-grid">
-        <AddEntryCard />
         {entries.map(entry => (
           <HistoryEntry
             key={entry.id}

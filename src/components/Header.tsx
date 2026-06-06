@@ -74,6 +74,12 @@ const Header = ({ currentStreak, pastEntries, onSearch, showSearch = true }: Hea
     <header className="sticky top-0 z-40 bg-[color-mix(in_oklab,var(--surface)_62%,transparent)] border-b border-[color-mix(in_oklab,var(--border)_45%,transparent)] backdrop-blur-[18px] px-6 py-4 transition-all duration-200 [html[data-theme=dark]_&]:shadow-[0_20px_42px_rgba(15,23,42,0.12)]">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 order-1">
+          <div className="flex items-center gap-2 md:hidden">
+            <div className="w-7 h-7 rounded-[8px] overflow-hidden grid place-items-center shrink-0">
+              <img src="/logo.png" alt="Waymark" className="w-full h-full object-contain block" />
+            </div>
+            <strong className="text-[var(--text)] text-base font-bold tracking-tight">Waymark</strong>
+          </div>
           {currentStreak > 0 && (
             <div className="flex items-center gap-1.5 bg-gradient-to-br from-[var(--accent-bg)] to-[var(--accent-bg-2)] text-white px-3 py-1.5 rounded-full border border-[var(--border)] text-[0.85rem] font-semibold shadow-sm whitespace-nowrap">
               <Flame size={14} strokeWidth={2} />
@@ -84,7 +90,7 @@ const Header = ({ currentStreak, pastEntries, onSearch, showSearch = true }: Hea
 
         {showSearch && (
           <div className="flex-1 flex justify-center order-3 md:order-2 w-full md:w-auto">
-            <div className="w-full max-w-[600px]">
+            <div className="w-full max-w-[380px]">
               <SearchBar
                 entries={pastEntries}
                 onSearch={onSearch}

@@ -69,6 +69,10 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 self._create_goal_completions_table(conn)
                 self._create_user_metrics_table(conn)
 
+                # Fitness tracking
+                self._create_fitness_connections_table(conn)
+                self._create_fitness_data_table(conn)
+
                 # Shared indexes
                 self._create_database_indexes(conn)
 
@@ -78,6 +82,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             self._insert_default_groups()
             self._migrate_groups_schema()
             self._migrate_group_options_schema()
+            self._migrate_entry_selections_source()
             self._add_missing_default_groups()
             self._seed_default_group_colors()
             self._seed_default_group_icons()
@@ -301,12 +306,77 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
         except sqlite3.Error as exc:
             logger.warning("User metrics table creation failed (non-critical): %s", exc)
 
+    def _create_fitness_connections_table(self, conn: sqlite3.Connection) -> None:
+        try:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS fitness_connections (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id         INTEGER NOT NULL,
+                    provider        TEXT NOT NULL,
+                    access_token    TEXT NOT NULL,
+                    refresh_token   TEXT,
+                    expires_at      TEXT,
+                    last_synced_at  TEXT,
+                    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                    UNIQUE(user_id, provider)
+                )
+                """
+            )
+            logger.info("Fitness connections table ready")
+        except sqlite3.Error as exc:
+            logger.warning("Fitness connections table creation failed (non-critical): %s", exc)
+
+    def _create_fitness_data_table(self, conn: sqlite3.Connection) -> None:
+        try:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS fitness_data (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id         INTEGER NOT NULL,
+                    source_provider TEXT NOT NULL,
+                    data_type       TEXT NOT NULL,
+                    date            TEXT NOT NULL,
+                    value           REAL NOT NULL,
+                    metadata        TEXT,
+                    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                    UNIQUE(user_id, source_provider, data_type, date)
+                )
+                """
+            )
+            logger.info("Fitness data table ready")
+        except sqlite3.Error as exc:
+            logger.warning("Fitness data table creation failed (non-critical): %s", exc)
+
+    def _migrate_entry_selections_source(self) -> None:
+        try:
+            with self._connect() as conn:
+                cur = conn.execute("PRAGMA table_info(entry_selections)")
+                cols = {row[1] for row in cur.fetchall()}
+                if "source" not in cols:
+                    conn.execute(
+                        "ALTER TABLE entry_selections ADD COLUMN source TEXT DEFAULT 'user'"
+                    )
+                    conn.commit()
+                    logger.info("entry_selections.source column added")
+        except sqlite3.Error as exc:
+            logger.warning("entry_selections source migration failed (non-critical): %s", exc)
+
     def _create_database_indexes(self, conn: sqlite3.Connection) -> None:
         try:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_mood_entries_date ON mood_entries(date)"
             )
-            logger.info("Mood entries index ready")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_fitness_data_user_date ON fitness_data(user_id, date DESC)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_fitness_connections_user ON fitness_connections(user_id)"
+            )
+            logger.info("Database indexes ready")
         except sqlite3.Error as exc:
             logger.warning("Index creation failed (non-critical): %s", exc)
 

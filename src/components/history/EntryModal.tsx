@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Pencil, Trash2, FileDown } from 'lucide-react';
 import { exportEntryToMarkdown } from '../../utils/exportUtils';
 import { getIconComponent } from '../../utils/iconRegistry';
+import { FITNESS_LABEL, formatFitnessValue } from '../../utils/fitnessUtils';
 import type { Entry, Group } from '../../types';
 
 const backdropStyle: React.CSSProperties = {
@@ -127,6 +128,29 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
                 </span>
               );
             })}
+          </div>
+        )}
+        {entry.fitness && entry.fitness.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            {entry.fitness.map((d) => (
+              <span
+                key={`${d.data_type}-${d.id}`}
+                style={{
+                  display: 'inline-block',
+                  padding: '3px 10px',
+                  borderRadius: 12,
+                  fontSize: '0.82rem',
+                  background: 'color-mix(in oklab, var(--accent-bg), transparent 85%)',
+                  border: '1px solid color-mix(in oklab, var(--accent-bg), transparent 60%)',
+                  color: 'var(--text)',
+                }}
+              >
+                <span style={{ color: 'var(--text-muted)', marginRight: 4 }}>
+                  {FITNESS_LABEL[d.data_type] ?? d.data_type}:
+                </span>
+                {formatFitnessValue(d)}
+              </span>
+            ))}
           </div>
         )}
         <div className="history-markdown">

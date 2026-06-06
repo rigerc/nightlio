@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import apiService from '../services/api';
+import { fitnessApi } from '../services/fitnessApi';
 import { useConfig } from './ConfigContext';
 import type { User } from '../types';
 
@@ -25,6 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(localStorage.getItem('waymark_token'));
+  const autoSyncFired = useRef(false);
 
   const logout = useCallback(() => {
     localStorage.removeItem('waymark_token');
@@ -96,6 +98,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!user || !config.enable_google_health || autoSyncFired.current) return;
+    autoSyncFired.current = true;
+    fitnessApi.sync(30).catch(() => {});
+  }, [user, config.enable_google_health]);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>

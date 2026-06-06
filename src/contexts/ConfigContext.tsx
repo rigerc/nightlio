@@ -9,7 +9,7 @@ interface ConfigContextValue {
   error: string | null;
 }
 
-const DEFAULT_CONFIG: AppConfig = { enable_google_oauth: false, enable_mood_music: false };
+const DEFAULT_CONFIG: AppConfig = { enable_google_oauth: false, enable_mood_music: false, enable_google_health: false };
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
 

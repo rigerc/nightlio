@@ -284,3 +284,306 @@ html[data-theme="dark"] {
 
 /* Subtle hover in dark mode */
 html[data-theme="dark"] button:hover { background-color: rgba(255,255,255,0.04); box-shadow: var(--shadow-sm); }
+
+/* ============================================================
+   COLOR SCHEMES
+   Applied via data-color attribute on <html>.
+   Each scheme overrides the primitive tokens; computed tokens
+   (--accent-bg-soft, --accent-chip-bg, etc.) update automatically
+   because they reference --accent-600 via color-mix().
+   ============================================================ */
+
+/* Shared dark overrides reused by all dark color schemes */
+.scheme-dark-shared {
+  --shadow-sm: 0 1px 2px rgba(16,24,40,0.06), 0 1px 1.5px rgba(16,24,40,0.03);
+  --shadow-md: 0 4px 12px rgba(16,24,40,0.08), 0 2px 4px rgba(16,24,40,0.06);
+  --shadow-lg: 0 10px 30px rgba(16,24,40,0.10), 0 3px 6px rgba(16,24,40,0.08);
+  --shadow-1: var(--shadow-md);
+  --shadow-2: var(--shadow-lg);
+  --shadow-3: 0 20px 60px rgba(16,24,40,0.14);
+  --overlay: rgba(0,0,0,0.55);
+  --skeleton-a: rgba(255,255,255,0.06);
+  --skeleton-b: rgba(255,255,255,0.12);
+}
+
+/* ---- Rose Piné ---- */
+html[data-color="rose-pine"][data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #191724;
+  --surface: #1f1d2e;
+  --text: #e0def4;
+  --text-muted: #908caa;
+  --border: #26233a;
+  --bg-card: rgba(31,29,46,0.92);
+  --fg-body: var(--text);
+
+  --accent-50:  #e2f4f7;
+  --accent-100: #c0e8ef;
+  --accent-200: #9ddbe7;
+  --accent-400: #6bc4d5;
+  --accent-500: #56bace;
+  --accent-600: #9ccfd8;
+  --accent-700: #7ab8c2;
+
+  --accent-bg: color-mix(in oklab, #9ccfd8 85%, #000);
+  --accent-bg-2: color-mix(in oklab, #7ab8c2 85%, #000);
+  --accent-bg-soft: color-mix(in oklab, #9ccfd8 22%, transparent);
+  --accent-bg-softer: color-mix(in oklab, #9ccfd8 16%, transparent);
+  --accent-chip-bg: color-mix(in oklab, #9ccfd8 24%, transparent);
+
+  --success: #9ccfd8;
+  --danger: #eb6f92;
+  --mood-1: #eb6f92;
+  --mood-2: #f6c177;
+  --mood-3: #ebbcba;
+  --mood-4: #9ccfd8;
+  --mood-5: #c4a7e7;
+
+  --ring: 0 0 0 3px rgba(156,207,216,0.35);
+
+  --shadow-sm: 0 1px 2px rgba(16,24,40,0.06), 0 1px 1.5px rgba(16,24,40,0.03);
+  --shadow-md: 0 4px 12px rgba(16,24,40,0.08), 0 2px 4px rgba(16,24,40,0.06);
+  --shadow-lg: 0 10px 30px rgba(16,24,40,0.10), 0 3px 6px rgba(16,24,40,0.08);
+  --shadow-1: var(--shadow-md);
+  --shadow-2: var(--shadow-lg);
+  --shadow-3: 0 20px 60px rgba(16,24,40,0.14);
+  --overlay: rgba(0,0,0,0.55);
+  --skeleton-a: rgba(255,255,255,0.06);
+  --skeleton-b: rgba(255,255,255,0.12);
+
+  --gradient-background: radial-gradient(circle at top, rgba(156,207,216,0.14), transparent 55%),
+                         radial-gradient(circle at 20% 30%, rgba(235,111,146,0.10), transparent 40%),
+                         linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+}
+
+html[data-color="rose-pine"][data-theme="dark"] button:hover {
+  background-color: rgba(255,255,255,0.04);
+  box-shadow: var(--shadow-sm);
+}
+
+html[data-color="rose-pine"][data-theme="light"] {
+  /* Rose Pine Dawn */
+  color-scheme: light;
+  --bg: #faf4ed;
+  --surface: #fffaf3;
+  --text: #575279;
+  --text-muted: #9893a5;
+  --border: #dfdad9;
+  --bg-card: var(--surface);
+  --fg-body: var(--text);
+
+  --accent-50:  #e8f4f7;
+  --accent-100: #c0dfe8;
+  --accent-200: #97cad9;
+  --accent-400: #3a8ea5;
+  --accent-500: #2d7a8e;
+  --accent-600: #286983;
+  --accent-700: #1f5569;
+
+  --accent-bg: #286983;
+  --accent-bg-2: #1f5569;
+  --accent-bg-soft: color-mix(in oklab, #286983 12%, transparent);
+  --accent-bg-softer: color-mix(in oklab, #286983 8%, transparent);
+  --accent-chip-bg: color-mix(in oklab, #286983 14%, transparent);
+
+  --success: #286983;
+  --danger: #b4637a;
+  --mood-1: #b4637a;
+  --mood-2: #ea9d34;
+  --mood-3: #d7827a;
+  --mood-4: #286983;
+  --mood-5: #907aa9;
+
+  --ring: 0 0 0 3px rgba(40,105,131,0.25);
+  --overlay: rgba(87,82,121,0.4);
+  --skeleton-a: rgba(0,0,0,0.06);
+  --skeleton-b: rgba(0,0,0,0.12);
+}
+
+/* ---- Catppuccin ---- */
+html[data-color="catppuccin"][data-theme="dark"] {
+  /* Mocha */
+  color-scheme: dark;
+  --bg: #1e1e2e;
+  --surface: #313244;
+  --text: #cdd6f4;
+  --text-muted: #a6adc8;
+  --border: #45475a;
+  --bg-card: rgba(49,50,68,0.92);
+  --fg-body: var(--text);
+
+  --accent-50:  #e8f0fe;
+  --accent-100: #c8d9fb;
+  --accent-200: #a8c2f8;
+  --accent-400: #74a8f5;
+  --accent-500: #5c97f3;
+  --accent-600: #89b4fa;
+  --accent-700: #6a9cf8;
+
+  --accent-bg: color-mix(in oklab, #89b4fa 85%, #000);
+  --accent-bg-2: color-mix(in oklab, #6a9cf8 85%, #000);
+  --accent-bg-soft: color-mix(in oklab, #89b4fa 22%, transparent);
+  --accent-bg-softer: color-mix(in oklab, #89b4fa 16%, transparent);
+  --accent-chip-bg: color-mix(in oklab, #89b4fa 24%, transparent);
+
+  --success: #a6e3a1;
+  --danger: #f38ba8;
+  --mood-1: #f38ba8;
+  --mood-2: #fab387;
+  --mood-3: #f9e2af;
+  --mood-4: #a6e3a1;
+  --mood-5: #89dceb;
+
+  --ring: 0 0 0 3px rgba(137,180,250,0.35);
+
+  --shadow-sm: 0 1px 2px rgba(16,24,40,0.06), 0 1px 1.5px rgba(16,24,40,0.03);
+  --shadow-md: 0 4px 12px rgba(16,24,40,0.08), 0 2px 4px rgba(16,24,40,0.06);
+  --shadow-lg: 0 10px 30px rgba(16,24,40,0.10), 0 3px 6px rgba(16,24,40,0.08);
+  --shadow-1: var(--shadow-md);
+  --shadow-2: var(--shadow-lg);
+  --shadow-3: 0 20px 60px rgba(16,24,40,0.14);
+  --overlay: rgba(0,0,0,0.55);
+  --skeleton-a: rgba(255,255,255,0.06);
+  --skeleton-b: rgba(255,255,255,0.12);
+
+  --gradient-background: radial-gradient(circle at top, rgba(137,180,250,0.16), transparent 55%),
+                         radial-gradient(circle at 20% 30%, rgba(243,139,168,0.10), transparent 40%),
+                         linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+}
+
+html[data-color="catppuccin"][data-theme="dark"] button:hover {
+  background-color: rgba(255,255,255,0.04);
+  box-shadow: var(--shadow-sm);
+}
+
+html[data-color="catppuccin"][data-theme="light"] {
+  /* Latte */
+  color-scheme: light;
+  --bg: #eff1f5;
+  --surface: #ffffff;
+  --text: #4c4f69;
+  --text-muted: #7c7f93;
+  --border: #dce0e8;
+  --bg-card: var(--surface);
+  --fg-body: var(--text);
+
+  --accent-50:  #e3eafd;
+  --accent-100: #c0d0fb;
+  --accent-200: #9db6f9;
+  --accent-400: #4574ef;
+  --accent-500: #2e60ec;
+  --accent-600: #1e66f5;
+  --accent-700: #1554d4;
+
+  --accent-bg: #1e66f5;
+  --accent-bg-2: #1554d4;
+  --accent-bg-soft: color-mix(in oklab, #1e66f5 12%, transparent);
+  --accent-bg-softer: color-mix(in oklab, #1e66f5 8%, transparent);
+  --accent-chip-bg: color-mix(in oklab, #1e66f5 14%, transparent);
+
+  --success: #40a02b;
+  --danger: #d20f39;
+  --mood-1: #d20f39;
+  --mood-2: #fe640b;
+  --mood-3: #df8e1d;
+  --mood-4: #40a02b;
+  --mood-5: #04a5e5;
+
+  --ring: 0 0 0 3px rgba(30,102,245,0.25);
+  --overlay: rgba(76,79,105,0.4);
+  --skeleton-a: rgba(0,0,0,0.06);
+  --skeleton-b: rgba(0,0,0,0.12);
+}
+
+/* ---- Nord ---- */
+html[data-color="nord"][data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #2e3440;
+  --surface: #3b4252;
+  --text: #eceff4;
+  --text-muted: #d8dee9;
+  --border: #434c5e;
+  --bg-card: rgba(59,66,82,0.92);
+  --fg-body: var(--text);
+
+  --accent-50:  #e5f0f4;
+  --accent-100: #c2dce6;
+  --accent-200: #9ac8d8;
+  --accent-400: #6aaec5;
+  --accent-500: #5aa0b9;
+  --accent-600: #88c0d0;
+  --accent-700: #6aaab8;
+
+  --accent-bg: color-mix(in oklab, #88c0d0 85%, #000);
+  --accent-bg-2: color-mix(in oklab, #6aaab8 85%, #000);
+  --accent-bg-soft: color-mix(in oklab, #88c0d0 22%, transparent);
+  --accent-bg-softer: color-mix(in oklab, #88c0d0 16%, transparent);
+  --accent-chip-bg: color-mix(in oklab, #88c0d0 24%, transparent);
+
+  --success: #a3be8c;
+  --danger: #bf616a;
+  --mood-1: #bf616a;
+  --mood-2: #d08770;
+  --mood-3: #ebcb8b;
+  --mood-4: #a3be8c;
+  --mood-5: #5e81ac;
+
+  --ring: 0 0 0 3px rgba(136,192,208,0.35);
+
+  --shadow-sm: 0 1px 2px rgba(16,24,40,0.06), 0 1px 1.5px rgba(16,24,40,0.03);
+  --shadow-md: 0 4px 12px rgba(16,24,40,0.08), 0 2px 4px rgba(16,24,40,0.06);
+  --shadow-lg: 0 10px 30px rgba(16,24,40,0.10), 0 3px 6px rgba(16,24,40,0.08);
+  --shadow-1: var(--shadow-md);
+  --shadow-2: var(--shadow-lg);
+  --shadow-3: 0 20px 60px rgba(16,24,40,0.14);
+  --overlay: rgba(0,0,0,0.55);
+  --skeleton-a: rgba(255,255,255,0.06);
+  --skeleton-b: rgba(255,255,255,0.12);
+
+  --gradient-background: radial-gradient(circle at top, rgba(136,192,208,0.16), transparent 55%),
+                         radial-gradient(circle at 20% 30%, rgba(235,203,139,0.10), transparent 40%),
+                         linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+}
+
+html[data-color="nord"][data-theme="dark"] button:hover {
+  background-color: rgba(255,255,255,0.04);
+  box-shadow: var(--shadow-sm);
+}
+
+html[data-color="nord"][data-theme="light"] {
+  color-scheme: light;
+  --bg: #eceff4;
+  --surface: #e5e9f0;
+  --text: #2e3440;
+  --text-muted: #4c566a;
+  --border: #d8dee9;
+  --bg-card: var(--surface);
+  --fg-body: var(--text);
+
+  --accent-50:  #e1eaf3;
+  --accent-100: #bfd4e8;
+  --accent-200: #9cbedd;
+  --accent-400: #6897c4;
+  --accent-500: #5988bb;
+  --accent-600: #5e81ac;
+  --accent-700: #4a6a92;
+
+  --accent-bg: #5e81ac;
+  --accent-bg-2: #4a6a92;
+  --accent-bg-soft: color-mix(in oklab, #5e81ac 12%, transparent);
+  --accent-bg-softer: color-mix(in oklab, #5e81ac 8%, transparent);
+  --accent-chip-bg: color-mix(in oklab, #5e81ac 14%, transparent);
+
+  --success: #a3be8c;
+  --danger: #bf616a;
+  --mood-1: #bf616a;
+  --mood-2: #d08770;
+  --mood-3: #ebcb8b;
+  --mood-4: #a3be8c;
+  --mood-5: #81a1c1;
+
+  --ring: 0 0 0 3px rgba(94,129,172,0.25);
+  --overlay: rgba(46,52,64,0.4);
+  --skeleton-a: rgba(0,0,0,0.06);
+  --skeleton-b: rgba(0,0,0,0.12);
+}

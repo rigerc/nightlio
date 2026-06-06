@@ -12,7 +12,6 @@ import {
 import MoodPicker from '../components/mood/MoodPicker';
 import MoodDisplay from '../components/mood/MoodDisplay';
 import GroupSelector from '../components/groups/GroupSelector';
-import GroupManager from '../components/groups/GroupManager';
 import MDArea from '../components/MarkdownArea';
 import type { MarkdownAreaRef } from '../components/MarkdownArea';
 import apiService from '../services/api';
@@ -56,8 +55,6 @@ interface EntryViewProps {
   groups: Group[];
   onBack: () => void;
   onEntryDeleted: (id: number) => void;
-  onCreateGroup: (name: string) => Promise<boolean>;
-  onCreateOption: (groupId: number, name: string) => Promise<boolean>;
   onSelectMood: (moodValue: MoodValue) => void;
   editingEntry?: Entry | null;
   onEntryUpdated: (
@@ -90,8 +87,6 @@ const EntryView = ({
   groups,
   onBack,
   onEntryDeleted,
-  onCreateGroup,
-  onCreateOption,
   onSelectMood,
   editingEntry = null,
   onEntryUpdated,
@@ -612,13 +607,6 @@ const EntryView = ({
             selectedOptions={selectedOptions}
             onOptionToggle={handleOptionToggle}
           />
-          <div style={{ marginTop: '1rem' }}>
-            <GroupManager
-              groups={groups}
-              onCreateGroup={onCreateGroup}
-              onCreateOption={onCreateOption}
-            />
-          </div>
         </div>
 
         <div className="entry-right">

@@ -126,7 +126,7 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
                   className="tag"
                   style={bg ? { backgroundColor: bg, borderColor: border, borderWidth: 1, borderStyle: 'solid' } : {}}
                 >
-                  {IconComp && <IconComp size={15} strokeWidth={1.75} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />}
+                  {IconComp && <IconComp size={15} strokeWidth={1.75} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px', ...(s.group_color ? { color: s.group_color } : {}) }} />}
                   {s.name}
                 </span>
               );

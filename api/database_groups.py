@@ -125,7 +125,7 @@ class GroupsMixin(DatabaseConnectionMixin):
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
                 """
-                SELECT go.id, go.name, go.icon, g.name as group_name, g.color as group_color
+                SELECT go.id, go.group_id, go.name, go.icon, g.name as group_name, g.color as group_color
                   FROM entry_selections es
                   JOIN group_options go ON es.option_id = go.id
                   JOIN groups g ON go.group_id = g.id

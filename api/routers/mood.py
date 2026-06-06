@@ -98,11 +98,11 @@ def create_mood_router(mood_service: MoodService, fitness_service=None) -> APIRo
             updated = mood_service.update_entry(
                 user_id,
                 entry_id,
-                mood=body.mood,
-                content=body.content,
-                date=body.date,
-                time=body.time,
-                selected_options=body.selected_options,
+                mood=fields.get('mood'),
+                content=fields.get('content'),
+                date=fields.get('date'),
+                time=fields.get('time'),
+                selected_options=fields.get('selected_options'),
             )
             if updated is None:
                 raise HTTPException(status_code=404, detail="Entry not found or no changes made")

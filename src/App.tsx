@@ -47,7 +47,7 @@ const AppContent = () => {
     navigate('/dashboard');
   };
 
-  const upsertEntry = (entry: Partial<Entry> & { id: number }) => {
+  const upsertEntry = useCallback((entry: Partial<Entry> & { id: number }) => {
     if (!entry.id) return;
     setPastEntries((prev) => {
       const existingIndex = prev.findIndex((item) => item.id === entry.id);
@@ -58,11 +58,11 @@ const AppContent = () => {
         item.id === entry.id ? { ...item, ...entry } as Entry : item
       );
     });
-  };
+  }, []);
 
-  const handleEntryDeleted = (deletedEntryId: number) => {
+  const handleEntryDeleted = useCallback((deletedEntryId: number) => {
     setPastEntries((prev) => prev.filter((entry) => entry.id !== deletedEntryId));
-  };
+  }, []);
 
   const handleStartEdit = (entry: Entry) => {
     navigate('entry', { state: { entry, mood: entry.mood } });
@@ -75,7 +75,7 @@ const AppContent = () => {
     navigate('.', { state: { ...locationState, mood: moodValue }, replace: true });
   };
 
-  const handleEntryUpdated = (
+  const handleEntryUpdated = useCallback((
     updatedEntry: Partial<Entry> & { id: number },
     options: { navigateAfterSave?: boolean; refreshAfterSave?: boolean } = {}
   ) => {
@@ -83,7 +83,7 @@ const AppContent = () => {
     upsertEntry(updatedEntry);
     if (navigateAfterSave) navigate('/dashboard');
     if (refreshAfterSave) refreshHistory();
-  };
+  }, [upsertEntry, navigate, refreshHistory]);
 
   const displayEntries = searchResults !== null ? searchResults : pastEntries;
   const isEntryView = location.pathname.endsWith('/entry');

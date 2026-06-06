@@ -15,8 +15,11 @@ const DEFAULT_MOOD_ICON_NAMES: Record<MoodValue, string> = {
 
 interface PreferencesContextValue {
   moodIconOverrides: Record<string, string>;
+  use24HourTime: boolean;
   updateMoodIcons: (icons: Record<string, string>) => Promise<void>;
+  updateUse24HourTime: (use24HourTime: boolean) => Promise<void>;
   getMoodIconComponent: (moodValue: number) => IconComponent;
+  formatTime: (date: Date) => string;
   DEFAULT_MOOD_ICON_NAMES: Record<MoodValue, string>;
 }
 
@@ -30,18 +33,30 @@ export const usePreferences = (): PreferencesContextValue => {
 
 export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
   const [moodIconOverrides, setMoodIconOverrides] = useState<Record<string, string>>({});
+  const [use24HourTime, setUse24HourTime] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user) return;
-    apiService.getMoodIconPreferences()
-      .then(r => setMoodIconOverrides(r.icons ?? {}))
-      .catch(() => {});
+
+    void Promise.all([
+      apiService.getMoodIconPreferences()
+        .then(r => setMoodIconOverrides(r.icons ?? {}))
+        .catch(() => {}),
+      apiService.getTimeFormatPreference()
+        .then(r => setUse24HourTime(Boolean(r.use_24_hour_time)))
+        .catch(() => {}),
+    ]);
   }, [user]);
 
   const updateMoodIcons = async (icons: Record<string, string>): Promise<void> => {
     await apiService.saveMoodIconPreferences(icons);
     setMoodIconOverrides(icons);
+  };
+
+  const updateUse24HourTime = async (nextUse24HourTime: boolean): Promise<void> => {
+    await apiService.saveTimeFormatPreference(nextUse24HourTime);
+    setUse24HourTime(nextUse24HourTime);
   };
 
   const getMoodIconComponent = (moodValue: number): IconComponent => {
@@ -50,8 +65,25 @@ export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
     return getIconComponent(name);
   };
 
+  const formatTime = (date: Date): string =>
+    date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !use24HourTime,
+    });
+
   return (
-    <PreferencesContext.Provider value={{ moodIconOverrides, updateMoodIcons, getMoodIconComponent, DEFAULT_MOOD_ICON_NAMES }}>
+    <PreferencesContext.Provider
+      value={{
+        moodIconOverrides,
+        use24HourTime,
+        updateMoodIcons,
+        updateUse24HourTime,
+        getMoodIconComponent,
+        formatTime,
+        DEFAULT_MOOD_ICON_NAMES,
+      }}
+    >
       {children}
     </PreferencesContext.Provider>
   );

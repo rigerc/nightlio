@@ -228,6 +228,17 @@ class ApiService {
     });
   }
 
+  getTimeFormatPreference(): Promise<{ use_24_hour_time: boolean }> {
+    return this.request<{ use_24_hour_time: boolean }>('/api/preferences/time-format');
+  }
+
+  saveTimeFormatPreference(use24HourTime: boolean): Promise<{ status: string; use_24_hour_time: boolean }> {
+    return this.request<{ status: string; use_24_hour_time: boolean }>('/api/preferences/time-format', {
+      method: 'PUT',
+      body: JSON.stringify({ use_24_hour_time: use24HourTime }),
+    });
+  }
+
   getUserAchievements(): Promise<Achievement[]> {
     return this.request<Achievement[]>('/api/achievements');
   }

@@ -4,6 +4,7 @@ import { Pencil, Trash2, FileDown } from 'lucide-react';
 import { exportEntryToMarkdown } from '../../utils/exportUtils';
 import { getIconComponent } from '../../utils/iconRegistry';
 import { FITNESS_LABEL, formatFitnessValue } from '../../utils/fitnessUtils';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import type { Entry, Group } from '../../types';
 
 const backdropStyle: React.CSSProperties = {
@@ -41,6 +42,8 @@ interface EntryModalProps {
 }
 
 const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEdit, groups = [] }: EntryModalProps) => {
+  const { formatTime } = usePreferences();
+
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -72,7 +75,7 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
             <div id="entry-modal-title" style={{ fontWeight: 600, color: 'var(--text)' }}>{entry.date}</div>
             {entry.created_at && (
               <div style={{ fontSize: '0.85rem', color: 'color-mix(in oklab, var(--text), transparent 30%)' }}>
-                {new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {formatTime(new Date(entry.created_at))}
               </div>
             )}
           </div>

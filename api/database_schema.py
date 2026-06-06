@@ -83,6 +83,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             self._migrate_groups_schema()
             self._migrate_group_options_schema()
             self._migrate_entry_selections_source()
+            self._migrate_user_preferences_schema()
             self._add_missing_default_groups()
             self._seed_default_group_colors()
             self._seed_default_group_icons()
@@ -253,12 +254,25 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             CREATE TABLE IF NOT EXISTS user_preferences (
                 user_id   INTEGER PRIMARY KEY,
                 mood_icons TEXT DEFAULT NULL,
+                use_24_hour_time INTEGER NOT NULL DEFAULT 0,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )
             """
         )
         logger.info("User preferences table ready")
+
+    def _migrate_user_preferences_schema(self) -> None:
+        try:
+            with self._connect() as conn:
+                cur = conn.execute("PRAGMA table_info(user_preferences)")
+                cols: Iterable[str] = {row[1] for row in cur.fetchall()}
+                if "use_24_hour_time" not in cols:
+                    conn.execute("ALTER TABLE user_preferences ADD COLUMN use_24_hour_time INTEGER NOT NULL DEFAULT 0")
+                    conn.commit()
+                    logger.info("User preferences migrated to include use_24_hour_time")
+        except sqlite3.Error as exc:
+            logger.warning("User preferences migration failed (non-critical): %s", exc)
 
     def _migrate_groups_schema(self) -> None:
         try:

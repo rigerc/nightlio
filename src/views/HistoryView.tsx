@@ -1,5 +1,6 @@
 import MoodPicker from '../components/mood/MoodPicker';
 import HistoryList from '../components/history/HistoryList';
+import { usePreferences } from '../contexts/PreferencesContext';
 import type { Entry, Group, MoodValue } from '../types';
 
 interface HistoryViewProps {
@@ -14,10 +15,10 @@ interface HistoryViewProps {
 }
 
 const HistoryView = ({ pastEntries, loading, error, onMoodSelect, onDelete, onEdit, renderOnlyHeader = false, groups = [] }: HistoryViewProps) => {
-
+  const { formatTime } = usePreferences();
   const currentDate = new Date();
   const dateString = currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeString = currentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const timeString = formatTime(currentDate);
 
   return (
     <>

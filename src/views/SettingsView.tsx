@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useConfig } from '../contexts/ConfigContext';
+import { usePreferences } from '../contexts/PreferencesContext';
 import ActivityCustomizer from '../components/groups/ActivityCustomizer';
 import MoodIconCustomizer from '../components/settings/MoodIconCustomizer';
 import FitnessConnectSection from '../components/fitness/FitnessConnectSection';
@@ -7,10 +9,26 @@ import type { AppConfig } from '../types';
 
 const SettingsView = () => {
   const { config, loading } = useConfig();
+  const { use24HourTime, updateUse24HourTime } = usePreferences();
+  const [isSavingTimeFormat, setIsSavingTimeFormat] = useState(false);
+  const [timeFormatError, setTimeFormatError] = useState('');
   const fitness = useFitnessData(
     config.enable_google_health ?? false,
     config.google_health_client_id,
   );
+
+  const handleTimeFormatChange = async (nextUse24HourTime: boolean) => {
+    setIsSavingTimeFormat(true);
+    setTimeFormatError('');
+    try {
+      await updateUse24HourTime(nextUse24HourTime);
+    } catch (error) {
+      console.error('Failed to save time format preference:', error);
+      setTimeFormatError('Could not save time format. Please try again.');
+    } finally {
+      setIsSavingTimeFormat(false);
+    }
+  };
 
   const featureFlags: Array<{ key: keyof AppConfig; label: string; description: string }> = [
     { key: 'enable_google_oauth', label: 'Google Login', description: 'Enable Google OAuth-based authentication.' },
@@ -19,6 +37,33 @@ const SettingsView = () => {
   return (
     <div className="text-left">
       <h2 className="mt-0 text-[var(--text)]">Settings</h2>
+
+      <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Time display settings">
+        <h3 className="mt-0 mb-1 text-[var(--text)]">Time display</h3>
+        <p className="mt-0 mb-3 text-[var(--text-muted)] text-sm">Choose how entry times appear across Waymark.</p>
+        <label className="flex items-start justify-between gap-4 py-2 border-t border-[var(--border)]">
+          <span>
+            <strong className="text-[var(--text)]">Use 24-hour time</strong>
+            <span className="block text-[var(--text-muted)] text-[0.86rem]">
+              Show times like 14:30 instead of 2:30 PM.
+              {isSavingTimeFormat ? ' Saving...' : ''}
+            </span>
+            {timeFormatError && (
+              <span className="block text-[var(--danger)] text-[0.86rem] mt-1" role="alert">
+                {timeFormatError}
+              </span>
+            )}
+          </span>
+          <input
+            type="checkbox"
+            checked={use24HourTime}
+            disabled={isSavingTimeFormat}
+            onChange={(event) => { void handleTimeFormatChange(event.target.checked); }}
+            aria-label="Use 24-hour time"
+            className="mt-1"
+          />
+        </label>
+      </section>
 
       <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Mood icon customization">
         <h3 className="mt-0 mb-1 text-[var(--text)]">Mood Icons</h3>

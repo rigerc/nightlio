@@ -593,57 +593,69 @@ const EntryView = ({
               />
             </div>
           )}
-          {isEditing && editingEntry && (
-            <div style={{
-              marginBottom: '1rem',
-              fontSize: '0.85rem',
-              display: 'flex',
-              flexDirection: 'column',
+          <div style={{
+            marginBottom: '1rem',
+            fontSize: '0.85rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+          }}>
+            <label style={{
+              display: 'inline-flex',
+              alignItems: 'center',
               gap: '0.5rem',
+              cursor: activeEntryId !== null ? 'pointer' : 'not-allowed',
+              userSelect: 'none',
+              width: 'fit-content',
+              opacity: activeEntryId !== null ? 1 : 0.6,
             }}>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none', width: 'fit-content' }}>
-                <input
-                  type="checkbox"
-                  checked={isImportant}
-                  onChange={(e) => handleImportantToggle(e.target.checked)}
-                  style={{ cursor: 'pointer' }}
-                />
-                <Star
-                  size={15}
-                  strokeWidth={1.75}
-                  style={{ color: 'var(--important-color)', fill: isImportant ? 'var(--important-color)' : 'none' }}
-                  aria-hidden="true"
-                />
-                <span style={{ color: isImportant ? 'var(--important-color-2)' : 'var(--text)', fontWeight: isImportant ? 600 : 400 }}>
-                  Mark this day as important
-                </span>
-              </label>
-              {isImportant && (
-                <input
-                  type="text"
-                  value={importantReason}
-                  onChange={(e) => setImportantReason(e.target.value)}
-                  onBlur={commitImportantReason}
-                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                  placeholder="Why is this day important? (e.g. Birthday, Anniversary…)"
-                  style={{
-                    border: '1px solid var(--important-border)',
-                    borderRadius: '6px',
-                    padding: '6px 10px',
-                    fontSize: '0.85rem',
-                    background: 'var(--surface)',
-                    color: 'var(--text)',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              )}
-              {isImportant && !importantReason.trim() && (
-                <span style={{ color: 'color-mix(in oklab, var(--text), transparent 40%)', fontSize: '0.78rem' }}>
-                  Add a reason to save this as an important day.
-                </span>
-              )}
-            </div>
-          )}
+              <input
+                type="checkbox"
+                checked={isImportant}
+                disabled={activeEntryId === null}
+                onChange={(e) => handleImportantToggle(e.target.checked)}
+                style={{ cursor: activeEntryId !== null ? 'pointer' : 'not-allowed' }}
+              />
+              <Star
+                size={15}
+                strokeWidth={1.75}
+                style={{ color: 'var(--important-color)', fill: isImportant ? 'var(--important-color)' : 'none' }}
+                aria-hidden="true"
+              />
+              <span style={{ color: isImportant ? 'var(--important-color-2)' : 'var(--text)', fontWeight: isImportant ? 600 : 400 }}>
+                Mark this day as important
+              </span>
+            </label>
+            {activeEntryId === null && (
+              <span style={{ color: 'color-mix(in oklab, var(--text), transparent 40%)', fontSize: '0.78rem' }}>
+                Start writing your entry — once it's saved you can mark this day as important.
+              </span>
+            )}
+            {activeEntryId !== null && isImportant && (
+              <input
+                type="text"
+                value={importantReason}
+                onChange={(e) => setImportantReason(e.target.value)}
+                onBlur={commitImportantReason}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                placeholder="Why is this day important? (e.g. Birthday, Anniversary…)"
+                style={{
+                  border: '1px solid var(--important-border)',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  fontSize: '0.85rem',
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  fontFamily: 'inherit',
+                }}
+              />
+            )}
+            {activeEntryId !== null && isImportant && !importantReason.trim() && (
+              <span style={{ color: 'color-mix(in oklab, var(--text), transparent 40%)', fontSize: '0.78rem' }}>
+                Add a reason to save this as an important day.
+              </span>
+            )}
+          </div>
           <div style={{ marginBottom: '1rem' }}>
             <MoodDisplay moodValue={selectedMood as MoodValue} showLabel={false}>
               <div className="entry-mood-actions">

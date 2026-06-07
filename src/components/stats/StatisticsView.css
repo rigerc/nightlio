@@ -51,12 +51,11 @@
   margin-top: 4px;
 }
 
-.statistics-view__overview-value--danger {
-  color: var(--danger);
-}
-
-.statistics-view__overview-value--neutral {
-  color: var(--text);
+.statistics-view__overview-helper {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: italic;
+  margin-top: 4px;
 }
 
 .statistics-view__section {
@@ -181,6 +180,13 @@
 
 .statistics-view__tag-empty {
   color: var(--text-muted);
+}
+
+.statistics-view__tag-confidence {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-left: 6px;
+  font-weight: 400;
 }
 
 .statistics-view__tag-note {

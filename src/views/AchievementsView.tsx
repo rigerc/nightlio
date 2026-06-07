@@ -29,8 +29,8 @@ interface AchievementDef {
 
 const getAllAchievements = (): AchievementDef[] => [
   { achievement_type: 'first_entry',      name: 'First Entry',       description: 'Log your first mood entry',    icon: 'Zap',       rarity: 'common'    },
-  { achievement_type: 'week_warrior',     name: 'Week Warrior',      description: 'Maintain a 7-day streak',      icon: 'Flame',     rarity: 'uncommon'  },
-  { achievement_type: 'consistency_king', name: 'Consistency King',  description: 'Maintain a 30-day streak',     icon: 'Crown',     rarity: 'rare'      },
+  { achievement_type: 'week_warrior',     name: 'Week Warrior',      description: 'Reach a 7-day logging streak', icon: 'Flame',     rarity: 'uncommon'  },
+  { achievement_type: 'consistency_king', name: 'Consistency King',  description: 'Reach a 30-day logging streak', icon: 'Crown',     rarity: 'rare'      },
   { achievement_type: 'data_lover',       name: 'Data Lover',        description: 'View statistics 10 times',     icon: 'BarChart3', rarity: 'uncommon'  },
   { achievement_type: 'mood_master',      name: 'Mood Master',       description: 'Log 100 total entries',        icon: 'Target',    rarity: 'legendary' },
 ];
@@ -134,7 +134,7 @@ const AchievementsView = () => {
           return <ProgressBar value={p.current} max={p.max} label="Progress to unlock" />;
         })()}
         <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-muted)' }}>
-          Log daily to maintain your streak. Viewing statistics contributes to "Data Lover".
+          Achievements reflect milestones in your logging history — there's no penalty for skipping a day, and your streak simply picks back up whenever you return.
         </div>
       </Modal>
     </div>

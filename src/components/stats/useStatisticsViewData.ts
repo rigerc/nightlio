@@ -5,11 +5,13 @@ import {
   EMPTY_OBJECT,
   buildCalendarDays,
   buildMoodDistributionData,
+  buildMoodBaselineComparison,
+  buildWeeklyDigest,
   aggregateTagStats,
   buildOverviewCards,
 } from './statisticsViewUtils';
-import type { CalendarDay, MoodDistributionDatum, OverviewCard, TagStats } from './statisticsViewUtils';
-import type { Entry, Statistics } from '../../types';
+import type { CalendarDay, MoodDistributionDatum, OverviewCard, TagStats, WeeklyDigest } from './statisticsViewUtils';
+import type { Entry, MoodValue, Statistics } from '../../types';
 
 interface WeeklyMoodPoint {
   date: string;
@@ -26,6 +28,7 @@ interface UseStatisticsViewDataReturn {
   tagStats: TagStats;
   calendarDays: CalendarDay[];
   overviewCards: OverviewCard[];
+  weeklyDigest: WeeklyDigest;
 }
 
 const useStatisticsViewData = (
@@ -44,6 +47,18 @@ const useStatisticsViewData = (
 
   const weeklyMoodData = useMemo(() => getWeeklyMoodData(pastEntries, range), [pastEntries, range]);
 
+  // Always compares the last 7 days to the personal all-time average — independent of
+  // the selected chart range — so "Average Mood" reads as a relative signal (#5/#14)
+  // rather than just a raw number.
+  const recentMoodComparison = useMemo(() => {
+    const recentMoods = getWeeklyMoodData(pastEntries, 7)
+      .map((d) => d.mood)
+      .filter((mood): mood is MoodValue => mood != null);
+    if (!recentMoods.length) return null;
+    const recentAverage = recentMoods.reduce((sum: number, mood) => sum + mood, 0) / recentMoods.length;
+    return buildMoodBaselineComparison(recentAverage, recentMoods.length, metrics.average_mood);
+  }, [pastEntries, metrics.average_mood]);
+
   const movingAverageSeries = useMemo(
     () => movingAverage(weeklyMoodData.map((d) => d.mood), 7),
     [weeklyMoodData],
@@ -61,6 +76,8 @@ const useStatisticsViewData = (
 
   const tagStats = useMemo(() => aggregateTagStats(pastEntries), [pastEntries]);
 
+  const weeklyDigest = useMemo(() => buildWeeklyDigest(pastEntries, tagStats), [pastEntries, tagStats]);
+
   const calendarDays = useMemo(() => buildCalendarDays(pastEntries), [pastEntries]);
 
   const bestDayCount = useMemo(() => {
@@ -75,8 +92,9 @@ const useStatisticsViewData = (
         averageMood: metrics.average_mood,
         currentStreak,
         bestDayCount,
+        recentMoodComparison,
       }),
-    [metrics.total_entries, metrics.average_mood, currentStreak, bestDayCount],
+    [metrics.total_entries, metrics.average_mood, currentStreak, bestDayCount, recentMoodComparison],
   );
 
   return {
@@ -88,6 +106,7 @@ const useStatisticsViewData = (
     tagStats,
     calendarDays,
     overviewCards,
+    weeklyDigest,
   };
 };
 

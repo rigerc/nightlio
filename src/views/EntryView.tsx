@@ -46,6 +46,8 @@ interface SavePayload {
   content: string;
   selected_options: number[];
   slider_values: Record<number, number>;
+  is_important: boolean;
+  important_reason: string;
 }
 
 interface LatestPayload {
@@ -81,17 +83,23 @@ const buildSnapshot = ({
   content,
   selectedOptions,
   sliderValues,
+  isImportant,
+  importantReason,
 }: {
   mood: number | null | undefined;
   content: string;
   selectedOptions: number[];
   sliderValues: Record<number, number>;
+  isImportant: boolean;
+  importantReason: string;
 }): string =>
   JSON.stringify({
     mood: mood ?? null,
     content: content ?? '',
     selected_options: normalizeSelectedOptions(selectedOptions),
     slider_values: normalizeSliderValues(sliderValues),
+    is_important: isImportant,
+    important_reason: importantReason,
   });
 
 const EntryView = ({
@@ -179,6 +187,8 @@ const EntryView = ({
         content,
         selectedOptions: selectionIds,
         sliderValues: sliderVals,
+        isImportant: editingEntry.is_important ?? false,
+        importantReason: editingEntry.important_reason ?? '',
       });
       setLastSavedAt(new Date());
       setSaveState(isBurnerMode ? 'disabled' : 'saved');
@@ -207,6 +217,8 @@ const EntryView = ({
       content: DEFAULT_MARKDOWN,
       selectedOptions: [],
       sliderValues: {},
+      isImportant: false,
+      importantReason: '',
     });
     setLastSavedAt(null);
     setSaveState(isBurnerMode ? 'disabled' : 'idle');
@@ -250,6 +262,8 @@ const EntryView = ({
                 content: payload.content,
                 selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
                 slider_values: normalizeSliderValues(payload.slider_values).map(([groupId, value]) => ({ group_id: groupId, value } as SliderValue)),
+                is_important: payload.is_important,
+                important_reason: payload.is_important ? payload.important_reason : null,
               };
           onEntryUpdated(updatedEntry, { navigateAfterSave: false, refreshAfterSave: false });
         } else {
@@ -261,6 +275,8 @@ const EntryView = ({
             slider_values: payload.slider_values,
             date: now.toLocaleDateString(),
             time: now.toISOString(),
+            is_important: payload.is_important,
+            important_reason: payload.important_reason,
           };
 
           const response = await apiService.createMoodEntry(createPayload);
@@ -280,6 +296,8 @@ const EntryView = ({
                 created_at: createPayload.time,
                 selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
                 slider_values: normalizeSliderValues(payload.slider_values).map(([groupId, value]) => ({ group_id: groupId, value } as SliderValue)),
+                is_important: payload.is_important,
+                important_reason: payload.is_important ? payload.important_reason : null,
               },
               { navigateAfterSave: false, refreshAfterSave: true }
             );
@@ -365,17 +383,24 @@ const EntryView = ({
   useEffect(() => {
     clearAutosaveTimer();
 
+    const trimmedReason = importantReason.trim();
+    const effectiveIsImportant = isImportant && trimmedReason.length > 0;
+
     const payload: SavePayload = {
       mood: selectedMood ? Number(selectedMood) : null,
       content: markdownContent || '',
       selected_options: normalizeSelectedOptions(selectedOptions),
       slider_values: sliderValues,
+      is_important: effectiveIsImportant,
+      important_reason: effectiveIsImportant ? trimmedReason : '',
     };
     const snapshot = buildSnapshot({
       mood: payload.mood,
       content: payload.content,
       selectedOptions: payload.selected_options,
       sliderValues: payload.slider_values,
+      isImportant: payload.is_important,
+      importantReason: payload.important_reason,
     });
 
     latestPayloadRef.current = { payload, snapshot };
@@ -415,7 +440,7 @@ const EntryView = ({
     }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => { clearAutosaveTimer(); };
-  }, [selectedMood, selectedOptions, sliderValues, markdownContent, isBurnerMode, executeAutosave, clearAutosaveTimer]);
+  }, [selectedMood, selectedOptions, sliderValues, markdownContent, isImportant, importantReason, isBurnerMode, executeAutosave, clearAutosaveTimer]);
 
   const handleOptionToggle = (optionId: number) => {
     setSelectedOptions((prev) =>
@@ -462,33 +487,6 @@ const EntryView = ({
     }
   };
 
-  const handleImportantToggle = async (checked: boolean) => {
-    setIsImportant(checked);
-    if (checked || !activeEntryIdRef.current) return;
-    try {
-      await apiService.updateMoodEntry(activeEntryIdRef.current, { is_important: false });
-      onEntryUpdated({ id: activeEntryIdRef.current, is_important: false }, { navigateAfterSave: false, refreshAfterSave: false });
-      show('Unmarked as important', 'success');
-    } catch {
-      show('Failed to update', 'error');
-    }
-  };
-
-  const commitImportantReason = async () => {
-    const trimmed = importantReason.trim();
-    if (!isImportant || !trimmed || !activeEntryIdRef.current) return;
-    try {
-      await apiService.updateMoodEntry(activeEntryIdRef.current, { is_important: true, important_reason: trimmed });
-      onEntryUpdated(
-        { id: activeEntryIdRef.current, is_important: true, important_reason: trimmed },
-        { navigateAfterSave: false, refreshAfterSave: false }
-      );
-      show('Marked as important', 'success');
-    } catch {
-      show('Failed to mark as important', 'error');
-    }
-  };
-
   const resetDraftComposer = () => {
     isHydratingEditorRef.current = true;
     markdownRef.current?.getInstance?.()?.setMarkdown(DEFAULT_MARKDOWN);
@@ -497,13 +495,18 @@ const EntryView = ({
     setMarkdownContent(DEFAULT_MARKDOWN);
     setSelectedOptions([]);
     setSliderValues({});
+    setIsImportant(false);
+    setImportantReason('');
     setSaveErrorMessage('');
     setSaveState('disabled');
 
-    const resetSnapshot = buildSnapshot({ mood: selectedMood, content: DEFAULT_MARKDOWN, selectedOptions: [], sliderValues: {} });
+    const resetSnapshot = buildSnapshot({
+      mood: selectedMood, content: DEFAULT_MARKDOWN, selectedOptions: [], sliderValues: {},
+      isImportant: false, importantReason: '',
+    });
     lastSavedSnapshotRef.current = resetSnapshot;
     latestPayloadRef.current = {
-      payload: { mood: selectedMood ? Number(selectedMood) : null, content: DEFAULT_MARKDOWN, selected_options: [], slider_values: {} },
+      payload: { mood: selectedMood ? Number(selectedMood) : null, content: DEFAULT_MARKDOWN, selected_options: [], slider_values: {}, is_important: false, important_reason: '' },
       snapshot: resetSnapshot,
     };
   };
@@ -604,17 +607,15 @@ const EntryView = ({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              cursor: activeEntryId !== null ? 'pointer' : 'not-allowed',
+              cursor: 'pointer',
               userSelect: 'none',
               width: 'fit-content',
-              opacity: activeEntryId !== null ? 1 : 0.6,
             }}>
               <input
                 type="checkbox"
                 checked={isImportant}
-                disabled={activeEntryId === null}
-                onChange={(e) => handleImportantToggle(e.target.checked)}
-                style={{ cursor: activeEntryId !== null ? 'pointer' : 'not-allowed' }}
+                onChange={(e) => setIsImportant(e.target.checked)}
+                style={{ cursor: 'pointer' }}
               />
               <Star
                 size={15}
@@ -626,18 +627,11 @@ const EntryView = ({
                 Mark this day as important
               </span>
             </label>
-            {activeEntryId === null && (
-              <span style={{ color: 'color-mix(in oklab, var(--text), transparent 40%)', fontSize: '0.78rem' }}>
-                Start writing your entry — once it's saved you can mark this day as important.
-              </span>
-            )}
-            {activeEntryId !== null && isImportant && (
+            {isImportant && (
               <input
                 type="text"
                 value={importantReason}
                 onChange={(e) => setImportantReason(e.target.value)}
-                onBlur={commitImportantReason}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                 placeholder="Why is this day important? (e.g. Birthday, Anniversary…)"
                 style={{
                   border: '1px solid var(--important-border)',
@@ -650,9 +644,9 @@ const EntryView = ({
                 }}
               />
             )}
-            {activeEntryId !== null && isImportant && !importantReason.trim() && (
+            {isImportant && !importantReason.trim() && (
               <span style={{ color: 'color-mix(in oklab, var(--text), transparent 40%)', fontSize: '0.78rem' }}>
-                Add a reason to save this as an important day.
+                Add a reason — it'll be saved along with your entry.
               </span>
             )}
           </div>

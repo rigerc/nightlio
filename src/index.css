@@ -108,6 +108,13 @@
   /* Semantic status colors */
   --success: #16a34a;          /* emerald-600 */
   --danger: #ef4444;           /* red-500 */
+  /* Important-day accent — warm gold, distinct from the teal accent and mood scale */
+  --important-color: #F2A93B;
+  --important-color-2: #E0742A;
+  --important-bg: linear-gradient(135deg, color-mix(in oklab, var(--important-color) 16%, transparent), color-mix(in oklab, var(--important-color-2) 8%, transparent));
+  --important-border: color-mix(in oklab, var(--important-color), transparent 40%);
+  --important-glow: 0 0 0 1.5px var(--important-border), 0 6px 20px color-mix(in oklab, var(--important-color), transparent 70%);
+  --important-chip-bg: color-mix(in oklab, var(--important-color) 20%, transparent);
   /* Mood scale (light theme defaults) */
   --mood-1: #ef4444; /* red */
   --mood-2: #f59e0b; /* orange */

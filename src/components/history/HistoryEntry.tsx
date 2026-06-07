@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Star } from 'lucide-react';
 import { getMoodIcon } from '../../utils/moodUtils';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { getIconComponent } from '../../utils/iconRegistry';
@@ -109,19 +110,21 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="entry-card"
+      className={`entry-card${entry.is_important ? ' is-important' : ''}`}
       role="button"
       tabIndex={0}
       onClick={openPreview}
       onKeyDown={onKey}
       aria-label={`Open entry from ${entry.date}`}
       style={{
-        border: isHovered ? '1px solid color-mix(in oklab, var(--accent-600), transparent 55%)' : '1px solid var(--border)',
-        boxShadow: isHovered ? 'var(--shadow-md)' : 'var(--shadow-sm)',
+        border: entry.is_important
+          ? undefined
+          : isHovered ? '1px solid color-mix(in oklab, var(--accent-600), transparent 55%)' : '1px solid var(--border)',
+        boxShadow: entry.is_important ? undefined : (isHovered ? 'var(--shadow-md)' : 'var(--shadow-sm)'),
         cursor: 'pointer',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
         <span style={{ color, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-bg-softer)', border: '1px solid var(--border)' }}>
           <MoodIconComponent size={18} strokeWidth={1.8} />
         </span>
@@ -136,6 +139,16 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
             </>
           )}
         </div>
+        {entry.is_important && (
+          <span
+            className="important-badge"
+            title={entry.important_reason || 'Important day'}
+            style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            <Star size={14} strokeWidth={1.75} />
+            {entry.important_reason || 'Important'}
+          </span>
+        )}
       </div>
 
       <div className="entry-card__title">{title || 'Entry'}</div>

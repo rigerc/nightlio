@@ -37,23 +37,25 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
         time: Optional[str] = None,
         selected_options: Optional[List[int]] = None,
         slider_values: Optional[Dict[int, int]] = None,
+        is_important: Optional[bool] = None,
+        important_reason: Optional[str] = None,
     ) -> int:
         with self._connect() as conn:
             if time:
                 cursor = conn.execute(
                     """
-                    INSERT INTO mood_entries (user_id, date, mood, content, created_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO mood_entries (user_id, date, mood, content, created_at, is_important, important_reason)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (user_id, date, mood, content, time),
+                    (user_id, date, mood, content, time, int(bool(is_important)), important_reason),
                 )
             else:
                 cursor = conn.execute(
                     """
-                    INSERT INTO mood_entries (user_id, date, mood, content)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO mood_entries (user_id, date, mood, content, is_important, important_reason)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (user_id, date, mood, content),
+                    (user_id, date, mood, content, int(bool(is_important)), important_reason),
                 )
 
             entry_id = cursor.lastrowid
@@ -163,7 +165,7 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
                 """
-                SELECT id, date, mood, content, created_at, updated_at
+                SELECT id, date, mood, content, created_at, updated_at, is_important, important_reason
                   FROM mood_entries
                  WHERE user_id = ?
                  ORDER BY created_at DESC, date DESC
@@ -182,7 +184,7 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
                 """
-                SELECT id, date, mood, content, created_at, updated_at
+                SELECT id, date, mood, content, created_at, updated_at, is_important, important_reason
                   FROM mood_entries
                  WHERE user_id = ? AND date BETWEEN ? AND ?
                  ORDER BY created_at DESC, date DESC
@@ -196,7 +198,7 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
                 """
-                SELECT id, date, mood, content, created_at, updated_at
+                SELECT id, date, mood, content, created_at, updated_at, is_important, important_reason
                   FROM mood_entries
                  WHERE id = ? AND user_id = ?
                 """,
@@ -215,6 +217,8 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
         time: Optional[str] = None,
         selected_options: Optional[List[int]] = None,
         slider_values: Optional[Dict[int, int]] = None,
+        is_important: Optional[bool] = None,
+        important_reason: Optional[str] = None,
     ) -> bool:
         updates: List[str] = []
         params: List[object] = []
@@ -231,6 +235,12 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
         if time is not None:
             updates.append("created_at = ?")
             params.append(time)
+        if is_important is not None:
+            updates.append("is_important = ?")
+            params.append(int(bool(is_important)))
+        if important_reason is not None:
+            updates.append("important_reason = ?")
+            params.append(important_reason)
 
         with self._connect() as conn:
             conn.row_factory = sqlite3.Row

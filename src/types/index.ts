@@ -39,6 +39,8 @@ export interface Entry {
   selections: Selection[];
   slider_values?: SliderValue[];
   fitness?: FitnessDataPoint[];
+  is_important?: boolean;
+  important_reason?: string | null;
 }
 
 export interface GroupOption {

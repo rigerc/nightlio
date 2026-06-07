@@ -29,6 +29,8 @@ def create_mood_router(mood_service: MoodService, fitness_service=None) -> APIRo
                 body.time,
                 body.selected_options,
                 body.slider_values,
+                body.is_important,
+                body.important_reason,
             )
             return {
                 "status": "success",
@@ -108,6 +110,8 @@ def create_mood_router(mood_service: MoodService, fitness_service=None) -> APIRo
                 time=fields.get('time'),
                 selected_options=fields.get('selected_options'),
                 slider_values=fields.get('slider_values'),
+                is_important=fields.get('is_important'),
+                important_reason=fields.get('important_reason'),
             )
             if updated is None:
                 raise HTTPException(status_code=404, detail="Entry not found or no changes made")

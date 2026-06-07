@@ -1,6 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import { useEffect } from 'react';
-import { Pencil, Trash2, FileDown } from 'lucide-react';
+import { Pencil, Trash2, FileDown, Star } from 'lucide-react';
 import { exportEntryToMarkdown } from '../../utils/exportUtils';
 import { getIconComponent } from '../../utils/iconRegistry';
 import { FITNESS_LABEL, formatFitnessValue } from '../../utils/fitnessUtils';
@@ -110,6 +110,15 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
             )}
           </div>
         </div>
+        {entry.is_important && (
+          <div className="important-banner" style={{ marginBottom: 12 }}>
+            <Star size={18} strokeWidth={1.75} />
+            <div>
+              <div style={{ fontWeight: 700 }}>Important day</div>
+              {entry.important_reason && <div style={{ fontSize: '0.9rem' }}>{entry.important_reason}</div>}
+            </div>
+          </div>
+        )}
         {title && (
           <div className="history-markdown" style={{ marginBottom: 8 }}>
             <h1 style={{ margin: 0 }}>{title}</h1>

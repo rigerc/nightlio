@@ -122,6 +122,8 @@ class ApiService {
     time?: string;
     selected_options?: number[];
     slider_values?: Record<number, number>;
+    is_important?: boolean;
+    important_reason?: string;
   }): Promise<MoodCreateResponse> {
     return this.request<MoodCreateResponse>('/api/mood', {
       method: 'POST',
@@ -136,6 +138,8 @@ class ApiService {
     time: string;
     selected_options: number[];
     slider_values: Record<number, number>;
+    is_important: boolean;
+    important_reason: string;
   }>): Promise<MoodUpdateResponse> {
     return this.request<MoodUpdateResponse>(`/api/mood/${entryId}`, {
       method: 'PUT',

@@ -5,6 +5,7 @@ import { exportEntryToMarkdown } from '../../utils/exportUtils';
 import { getIconComponent } from '../../utils/iconRegistry';
 import { FITNESS_LABEL, formatFitnessValue } from '../../utils/fitnessUtils';
 import { usePreferences } from '../../contexts/PreferencesContext';
+import SliderValueBar from '../groups/SliderValueBar';
 import type { Entry, Group } from '../../types';
 
 const backdropStyle: React.CSSProperties = {
@@ -112,6 +113,13 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
         {title && (
           <div className="history-markdown" style={{ marginBottom: 8 }}>
             <h1 style={{ margin: 0 }}>{title}</h1>
+          </div>
+        )}
+        {entry.slider_values && entry.slider_values.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {entry.slider_values.map(sliderValue => (
+              <SliderValueBar key={sliderValue.id} sliderValue={sliderValue} />
+            ))}
           </div>
         )}
         {entry.selections && entry.selections.length > 0 && (

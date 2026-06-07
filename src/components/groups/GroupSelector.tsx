@@ -4,13 +4,62 @@ import type { Group } from '../../types';
 
 const tintBg = (hex: string | null | undefined): string | undefined => hex ? hex + '18' : undefined;
 
+interface SliderGroupPickerProps {
+  group: Group;
+  value: number | undefined;
+  onChange: (groupId: number, value: number | undefined) => void;
+}
+
+const SliderGroupPicker = ({ group, value, onChange }: SliderGroupPickerProps) => {
+  const min = group.slider_min ?? 1;
+  const max = group.slider_max ?? 5;
+  const accentColor = group.color ?? null;
+  const steps = Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {steps.map(step => {
+        const label = group.slider_labels?.[step - min] ?? String(step);
+        const isSelected = value === step;
+        const selectedStyle = accentColor ? {
+          backgroundColor: tintBg(accentColor),
+          borderColor: accentColor,
+          color: 'var(--text)',
+        } : {};
+
+        return (
+          <button
+            key={step}
+            type="button"
+            onClick={() => onChange(group.id, isSelected ? undefined : step)}
+            title={label}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer flex items-center gap-1.5',
+              isSelected
+                ? accentColor
+                  ? 'border-2 shadow-sm -translate-y-px'
+                  : 'bg-gradient-to-br from-[var(--accent-bg)] to-[var(--accent-bg-2)] text-white border-2 border-[var(--accent-600)] shadow-sm -translate-y-px'
+                : 'bg-[var(--surface)] text-[var(--text)] border-2 border-[var(--border)] shadow-sm hover:border-[var(--accent-600)] hover:-translate-y-px'
+            )}
+            style={isSelected ? selectedStyle : {}}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 interface GroupSelectorProps {
   groups: Group[];
   selectedOptions: number[];
   onOptionToggle: (id: number) => void;
+  sliderValues: Record<number, number | undefined>;
+  onSliderChange: (groupId: number, value: number | undefined) => void;
 }
 
-const GroupSelector = ({ groups, selectedOptions, onOptionToggle }: GroupSelectorProps) => {
+const GroupSelector = ({ groups, selectedOptions, onOptionToggle, sliderValues, onSliderChange }: GroupSelectorProps) => {
   if (!groups.length) return null;
 
   return (
@@ -26,36 +75,40 @@ const GroupSelector = ({ groups, selectedOptions, onOptionToggle }: GroupSelecto
               {GroupIconComp && <GroupIconComp className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.75} style={{ color: headerColor }} />}
               {group.name}
             </h3>
-            <div className="flex flex-wrap gap-2">
-              {group.options.map(option => {
-                const isSelected = selectedOptions.includes(option.id);
-                const OptionIconComp = option.icon ? getIconComponent(option.icon) : null;
-                const selectedStyle = accentColor ? {
-                  backgroundColor: tintBg(accentColor),
-                  borderColor: accentColor,
-                  color: 'var(--text)',
-                } : {};
+            {group.type === 'slider' ? (
+              <SliderGroupPicker group={group} value={sliderValues[group.id]} onChange={onSliderChange} />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {group.options.map(option => {
+                  const isSelected = selectedOptions.includes(option.id);
+                  const OptionIconComp = option.icon ? getIconComponent(option.icon) : null;
+                  const selectedStyle = accentColor ? {
+                    backgroundColor: tintBg(accentColor),
+                    borderColor: accentColor,
+                    color: 'var(--text)',
+                  } : {};
 
-                return (
-                  <button
-                    key={option.id}
-                    onClick={() => onOptionToggle(option.id)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer flex items-center gap-1.5',
-                      isSelected
-                        ? accentColor
-                          ? 'border-2 shadow-sm -translate-y-px'
-                          : 'bg-gradient-to-br from-[var(--accent-bg)] to-[var(--accent-bg-2)] text-white border-2 border-[var(--accent-600)] shadow-sm -translate-y-px'
-                        : 'bg-[var(--surface)] text-[var(--text)] border-2 border-[var(--border)] shadow-sm hover:border-[var(--accent-600)] hover:-translate-y-px'
-                    )}
-                    style={isSelected ? selectedStyle : {}}
-                  >
-                    {OptionIconComp && <OptionIconComp className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" strokeWidth={1.75} />}
-                    {option.name}
-                  </button>
-                );
-              })}
-            </div>
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => onOptionToggle(option.id)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer flex items-center gap-1.5',
+                        isSelected
+                          ? accentColor
+                            ? 'border-2 shadow-sm -translate-y-px'
+                            : 'bg-gradient-to-br from-[var(--accent-bg)] to-[var(--accent-bg-2)] text-white border-2 border-[var(--accent-600)] shadow-sm -translate-y-px'
+                          : 'bg-[var(--surface)] text-[var(--text)] border-2 border-[var(--border)] shadow-sm hover:border-[var(--accent-600)] hover:-translate-y-px'
+                      )}
+                      style={isSelected ? selectedStyle : {}}
+                    >
+                      {OptionIconComp && <OptionIconComp className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" strokeWidth={1.75} />}
+                      {option.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}

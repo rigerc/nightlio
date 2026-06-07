@@ -16,7 +16,8 @@ def create_group_router(group_service: GroupService) -> APIRouter:
     @router.post("/groups", status_code=201)
     def create_group(body: GroupCreate):
         try:
-            group_id = group_service.create_group(body.name)
+            kwargs = body.model_dump(exclude={"name"}, exclude_none=True)
+            group_id = group_service.create_group(body.name, **kwargs)
             return {"status": "success", "group_id": group_id, "message": "Group created successfully"}
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))

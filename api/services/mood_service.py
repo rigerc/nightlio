@@ -15,6 +15,7 @@ class MoodService:
         content: str,
         time: Optional[str] = None,
         selected_options: Optional[List[int]] = None,
+        slider_values: Optional[Dict[int, int]] = None,
     ) -> Dict:
         """Create a new mood entry and check for achievements"""
         if not (1 <= mood <= 5):
@@ -24,7 +25,7 @@ class MoodService:
             raise ValueError("Content cannot be empty")
 
         entry_id = self.db.add_mood_entry(
-            user_id, date, mood, content, time, selected_options
+            user_id, date, mood, content, time, selected_options, slider_values
         )
 
         # Check for new achievements
@@ -55,6 +56,7 @@ class MoodService:
         date: Optional[str] = None,
         time: Optional[str] = None,
         selected_options: Optional[List[int]] = None,
+        slider_values: Optional[Dict[int, int]] = None,
     ) -> Optional[Dict]:
         """Update an existing mood entry for a user and return the updated record"""
         if mood is not None and not (1 <= mood <= 5):
@@ -71,6 +73,7 @@ class MoodService:
             date=date,
             time=time,
             selected_options=selected_options,
+            slider_values=slider_values,
         )
 
         if not updated:
@@ -80,8 +83,8 @@ class MoodService:
         if not entry:
             return None
 
-        selections = self.db.get_entry_selections(entry_id)
-        entry["selections"] = selections
+        entry["selections"] = self.db.get_entry_selections(entry_id)
+        entry["slider_values"] = self.db.get_entry_slider_values(entry_id)
         return entry
 
     def add_mood_log(self, user_id: int, entry_id: int, mood: int) -> Dict:
@@ -134,3 +137,10 @@ class MoodService:
         if not entry:
             return []
         return self.db.get_entry_selections(entry_id)
+
+    def get_entry_slider_values(self, user_id: int, entry_id: int) -> List[Dict]:
+        """Get slider values for an entry (with user verification)"""
+        entry = self.db.get_mood_entry_by_id(user_id, entry_id)
+        if not entry:
+            return []
+        return self.db.get_entry_slider_values(entry_id)

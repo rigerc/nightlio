@@ -62,6 +62,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 self._create_groups_table(conn)
                 self._create_group_options_table(conn)
                 self._create_entry_selections_table(conn)
+                self._create_entry_slider_values_table(conn)
                 self._create_achievements_table(conn)
                 self._create_user_preferences_table(conn)
 
@@ -208,6 +209,23 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
         )
         logger.info("Entry selections table ready")
 
+    def _create_entry_slider_values_table(self, conn: sqlite3.Connection) -> None:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS entry_slider_values (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entry_id INTEGER NOT NULL,
+                group_id INTEGER NOT NULL,
+                value INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (entry_id) REFERENCES mood_entries (id) ON DELETE CASCADE,
+                FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
+                UNIQUE(entry_id, group_id)
+            )
+            """
+        )
+        logger.info("Entry slider values table ready")
+
     def _create_achievements_table(self, conn: sqlite3.Connection) -> None:
         conn.execute(
             """
@@ -327,6 +345,14 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                     conn.execute("ALTER TABLE groups ADD COLUMN icon TEXT DEFAULT NULL")
                 if "sort_order" not in cols:
                     conn.execute("ALTER TABLE groups ADD COLUMN sort_order INTEGER DEFAULT 0")
+                if "type" not in cols:
+                    conn.execute("ALTER TABLE groups ADD COLUMN type TEXT NOT NULL DEFAULT 'category'")
+                if "slider_min" not in cols:
+                    conn.execute("ALTER TABLE groups ADD COLUMN slider_min INTEGER DEFAULT 1")
+                if "slider_max" not in cols:
+                    conn.execute("ALTER TABLE groups ADD COLUMN slider_max INTEGER DEFAULT 5")
+                if "slider_labels" not in cols:
+                    conn.execute("ALTER TABLE groups ADD COLUMN slider_labels TEXT DEFAULT NULL")
                 conn.commit()
                 logger.info("Groups table schema migration complete")
         except sqlite3.Error as exc:

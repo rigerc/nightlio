@@ -36,6 +36,7 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
         content: str,
         time: Optional[str] = None,
         selected_options: Optional[List[int]] = None,
+        slider_values: Optional[Dict[int, int]] = None,
     ) -> int:
         with self._connect() as conn:
             if time:
@@ -61,6 +62,12 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
                 conn.executemany(
                     "INSERT INTO entry_selections (entry_id, option_id) VALUES (?, ?)",
                     [(entry_id, option_id) for option_id in selected_options],
+                )
+
+            if slider_values:
+                conn.executemany(
+                    "INSERT INTO entry_slider_values (entry_id, group_id, value) VALUES (?, ?, ?)",
+                    [(entry_id, group_id, value) for group_id, value in slider_values.items()],
                 )
 
             # Create the first mood log so future logs produce correct averages
@@ -207,6 +214,7 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
         date: Optional[str] = None,
         time: Optional[str] = None,
         selected_options: Optional[List[int]] = None,
+        slider_values: Optional[Dict[int, int]] = None,
     ) -> bool:
         updates: List[str] = []
         params: List[object] = []
@@ -263,8 +271,20 @@ class MoodEntriesMixin(DatabaseConnectionMixin):
                     )
                 updated = True
 
+            if slider_values is not None:
+                conn.execute(
+                    "DELETE FROM entry_slider_values WHERE entry_id = ?",
+                    (entry_id,),
+                )
+                if slider_values:
+                    conn.executemany(
+                        "INSERT INTO entry_slider_values (entry_id, group_id, value) VALUES (?, ?, ?)",
+                        [(entry_id, group_id, value) for group_id, value in slider_values.items()],
+                    )
+                updated = True
+
             conn.commit()
-            return updated or bool(selected_options is not None)
+            return updated or bool(selected_options is not None) or bool(slider_values is not None)
 
     def delete_mood_entry(self, user_id: int, entry_id: int) -> bool:
         with self._connect() as conn:

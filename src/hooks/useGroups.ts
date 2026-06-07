@@ -1,14 +1,21 @@
 import { useState, useEffect } from 'react';
 import apiService from '../services/api';
-import type { Group } from '../types';
+import type { Group, GroupType } from '../types';
+
+export interface CreateGroupOptions {
+  type?: GroupType;
+  slider_min?: number;
+  slider_max?: number;
+  slider_labels?: string[];
+}
 
 export interface UseGroupsReturn {
   groups: Group[];
   loading: boolean;
   error: string | null;
-  createGroup: (name: string) => Promise<boolean>;
+  createGroup: (name: string, options?: CreateGroupOptions) => Promise<boolean>;
   createGroupOption: (groupId: number, name: string) => Promise<boolean>;
-  updateGroup: (groupId: number, data: Partial<{ name: string; color: string; icon: string; sort_order: number }>) => Promise<boolean>;
+  updateGroup: (groupId: number, data: Partial<{ name: string; color: string; icon: string; sort_order: number; type: GroupType; slider_min: number; slider_max: number; slider_labels: string[] | null }>) => Promise<boolean>;
   updateGroupOption: (optionId: number, data: Partial<{ name: string; icon: string; sort_order: number }>) => Promise<boolean>;
   deleteGroup: (groupId: number) => Promise<boolean>;
   deleteGroupOption: (optionId: number) => Promise<boolean>;
@@ -36,9 +43,9 @@ export const useGroups = (): UseGroupsReturn => {
     }
   };
 
-  const createGroup = async (name: string): Promise<boolean> => {
+  const createGroup = async (name: string, options?: CreateGroupOptions): Promise<boolean> => {
     try {
-      await apiService.createGroup({ name });
+      await apiService.createGroup({ name, ...options });
       await loadGroups();
       return true;
     } catch (err) {
@@ -60,7 +67,7 @@ export const useGroups = (): UseGroupsReturn => {
     }
   };
 
-  const updateGroup = async (groupId: number, data: Partial<{ name: string; color: string; icon: string; sort_order: number }>): Promise<boolean> => {
+  const updateGroup = async (groupId: number, data: Partial<{ name: string; color: string; icon: string; sort_order: number; type: GroupType; slider_min: number; slider_max: number; slider_labels: string[] | null }>): Promise<boolean> => {
     try {
       await apiService.updateGroup(groupId, data);
       await loadGroups();

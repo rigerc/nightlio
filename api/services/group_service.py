@@ -1,5 +1,20 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from api.database import MoodDatabase
+
+
+def _validate_slider_fields(kwargs: Dict[str, Any]) -> None:
+    """Validate slider_min/slider_max/slider_labels consistency when present together."""
+    slider_min = kwargs.get("slider_min")
+    slider_max = kwargs.get("slider_max")
+    slider_labels = kwargs.get("slider_labels")
+
+    if slider_min is not None and slider_max is not None and slider_min >= slider_max:
+        raise ValueError("slider_min must be less than slider_max")
+
+    if slider_labels is not None and slider_min is not None and slider_max is not None:
+        expected = slider_max - slider_min + 1
+        if len(slider_labels) != expected:
+            raise ValueError(f"slider_labels must contain exactly {expected} entries for the given range")
 
 
 class GroupService:
@@ -10,11 +25,29 @@ class GroupService:
         """Get all groups with their options"""
         return self.db.get_all_groups()
 
-    def create_group(self, name: str) -> int:
-        """Create a new group"""
+    def create_group(
+        self,
+        name: str,
+        type: str = "category",
+        slider_min: Optional[int] = None,
+        slider_max: Optional[int] = None,
+        slider_labels: Optional[List[str]] = None,
+    ) -> int:
+        """Create a new group (category or slider)"""
         if not name.strip():
             raise ValueError("Group name cannot be empty")
-        return self.db.create_group(name.strip())
+
+        if type == "slider":
+            effective_min = slider_min if slider_min is not None else 1
+            effective_max = slider_max if slider_max is not None else 5
+            _validate_slider_fields({
+                "slider_min": effective_min,
+                "slider_max": effective_max,
+                "slider_labels": slider_labels,
+            })
+            return self.db.create_group(name.strip(), type="slider", slider_min=effective_min, slider_max=effective_max, slider_labels=slider_labels)
+
+        return self.db.create_group(name.strip(), type="category")
 
     def create_group_option(self, group_id: int, name: str) -> int:
         """Create a new option for a group"""
@@ -23,11 +56,12 @@ class GroupService:
         return self.db.create_group_option(group_id, name.strip())
 
     def update_group(self, group_id: int, **kwargs: Any) -> bool:
-        """Update group properties (name, color, icon, sort_order)"""
+        """Update group properties (name, color, icon, sort_order, type, slider config)"""
         if "name" in kwargs and not str(kwargs["name"]).strip():
             raise ValueError("Group name cannot be empty")
         if "name" in kwargs:
             kwargs["name"] = str(kwargs["name"]).strip()
+        _validate_slider_fields(kwargs)
         return self.db.update_group(group_id, kwargs)
 
     def update_group_option(self, option_id: int, **kwargs: Any) -> bool:

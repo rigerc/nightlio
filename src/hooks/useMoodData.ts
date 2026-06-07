@@ -24,11 +24,14 @@ export const useMoodData = (): UseMoodDataReturn => {
       const entriesWithSelections = await Promise.all(
         data.map(async (entry) => {
           try {
-            const selections = await apiService.getEntrySelections(entry.id);
-            return { ...entry, selections };
+            const [selections, sliderValues] = await Promise.all([
+              apiService.getEntrySelections(entry.id),
+              apiService.getEntrySliderValues(entry.id),
+            ]);
+            return { ...entry, selections, slider_values: sliderValues };
           } catch (err) {
             console.error(`Failed to load selections for entry ${entry.id}:`, err);
-            return { ...entry, selections: [] };
+            return { ...entry, selections: [], slider_values: [] };
           }
         })
       );

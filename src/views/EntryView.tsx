@@ -18,7 +18,7 @@ import type { MarkdownAreaRef } from '../components/MarkdownArea';
 import apiService from '../services/api';
 import { useToast } from '../components/ui/ToastProvider';
 import { useBurner } from '../contexts/BurnerContext';
-import type { MoodValue, Entry, Group, Selection } from '../types';
+import type { MoodValue, Entry, Group, Selection, SliderValue } from '../types';
 
 const DEFAULT_MARKDOWN = '';
 const DEFAULT_MARKDOWN_TRIMMED = DEFAULT_MARKDOWN.trim();
@@ -44,6 +44,7 @@ interface SavePayload {
   mood: number | null;
   content: string;
   selected_options: number[];
+  slider_values: Record<number, number>;
 }
 
 interface LatestPayload {
@@ -68,19 +69,28 @@ interface EntryViewProps {
 const normalizeSelectedOptions = (optionIds: number[] = []): number[] =>
   [...optionIds].map((id) => Number(id)).filter((id) => Number.isFinite(id)).sort((a, b) => a - b);
 
+const normalizeSliderValues = (values: Record<number, number> = {}): [number, number][] =>
+  Object.entries(values)
+    .map(([groupId, value]) => [Number(groupId), Number(value)] as [number, number])
+    .filter(([groupId, value]) => Number.isFinite(groupId) && Number.isFinite(value))
+    .sort((a, b) => a[0] - b[0]);
+
 const buildSnapshot = ({
   mood,
   content,
   selectedOptions,
+  sliderValues,
 }: {
   mood: number | null | undefined;
   content: string;
   selectedOptions: number[];
+  sliderValues: Record<number, number>;
 }): string =>
   JSON.stringify({
     mood: mood ?? null,
     content: content ?? '',
     selected_options: normalizeSelectedOptions(selectedOptions),
+    slider_values: normalizeSliderValues(sliderValues),
   });
 
 const EntryView = ({
@@ -95,8 +105,12 @@ const EntryView = ({
 }: EntryViewProps) => {
   const isEditing = Boolean(editingEntry);
   const initialSelectionIds = editingEntry?.selections?.map((s) => s.id) ?? [];
+  const initialSliderValues: Record<number, number> = Object.fromEntries(
+    (editingEntry?.slider_values ?? []).map((sv) => [sv.group_id, sv.value])
+  );
 
   const [selectedOptions, setSelectedOptions] = useState<number[]>(initialSelectionIds);
+  const [sliderValues, setSliderValues] = useState<Record<number, number>>(initialSliderValues);
   const [markdownContent, setMarkdownContent] = useState(editingEntry?.content || DEFAULT_MARKDOWN);
   const [activeEntryId, setActiveEntryId] = useState<number | null>(editingEntry?.id ?? null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -137,9 +151,13 @@ const EntryView = ({
       skipAutosaveFlushRef.current = false;
 
       const selectionIds = editingEntry.selections?.map((s) => s.id) ?? [];
+      const sliderVals: Record<number, number> = Object.fromEntries(
+        (editingEntry.slider_values ?? []).map((sv) => [sv.group_id, sv.value])
+      );
       const content = editingEntry.content || '';
 
       setSelectedOptions(selectionIds);
+      setSliderValues(sliderVals);
       setActiveEntryId(editingEntry.id);
       setMarkdownContent(content);
       setEntryDateInput(dateToInputValue(editingEntry.date));
@@ -155,6 +173,7 @@ const EntryView = ({
         mood: selectedMood ?? editingEntry.mood,
         content,
         selectedOptions: selectionIds,
+        sliderValues: sliderVals,
       });
       setLastSavedAt(new Date());
       setSaveState(isBurnerMode ? 'disabled' : 'saved');
@@ -163,6 +182,7 @@ const EntryView = ({
     }
 
     setSelectedOptions([]);
+    setSliderValues({});
     setActiveEntryId(null);
     setMarkdownContent(DEFAULT_MARKDOWN);
     createdByAutosaveRef.current = false;
@@ -179,6 +199,7 @@ const EntryView = ({
       mood: selectedMood,
       content: DEFAULT_MARKDOWN,
       selectedOptions: [],
+      sliderValues: {},
     });
     setLastSavedAt(null);
     setSaveState(isBurnerMode ? 'disabled' : 'idle');
@@ -215,12 +236,13 @@ const EntryView = ({
           const entryId = activeEntryIdRef.current;
           const response = await apiService.updateMoodEntry(entryId, { ...payload, mood: payload.mood ?? undefined });
           const updatedEntry: Partial<Entry> & { id: number } = response?.entry
-            ? { ...response.entry, selections: response.entry.selections ?? [] }
+            ? { ...response.entry, selections: response.entry.selections ?? [], slider_values: response.entry.slider_values ?? [] }
             : {
                 id: entryId,
                 mood: payload.mood as MoodValue | undefined,
                 content: payload.content,
                 selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
+                slider_values: normalizeSliderValues(payload.slider_values).map(([groupId, value]) => ({ group_id: groupId, value } as SliderValue)),
               };
           onEntryUpdated(updatedEntry, { navigateAfterSave: false, refreshAfterSave: false });
         } else {
@@ -229,6 +251,7 @@ const EntryView = ({
             mood: payload.mood as number,
             content: payload.content,
             selected_options: payload.selected_options,
+            slider_values: payload.slider_values,
             date: now.toLocaleDateString(),
             time: now.toISOString(),
           };
@@ -249,6 +272,7 @@ const EntryView = ({
                 date: createPayload.date,
                 created_at: createPayload.time,
                 selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
+                slider_values: normalizeSliderValues(payload.slider_values).map(([groupId, value]) => ({ group_id: groupId, value } as SliderValue)),
               },
               { navigateAfterSave: false, refreshAfterSave: true }
             );
@@ -338,11 +362,13 @@ const EntryView = ({
       mood: selectedMood ? Number(selectedMood) : null,
       content: markdownContent || '',
       selected_options: normalizeSelectedOptions(selectedOptions),
+      slider_values: sliderValues,
     };
     const snapshot = buildSnapshot({
       mood: payload.mood,
       content: payload.content,
       selectedOptions: payload.selected_options,
+      sliderValues: payload.slider_values,
     });
 
     latestPayloadRef.current = { payload, snapshot };
@@ -382,12 +408,24 @@ const EntryView = ({
     }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => { clearAutosaveTimer(); };
-  }, [selectedMood, selectedOptions, markdownContent, isBurnerMode, executeAutosave, clearAutosaveTimer]);
+  }, [selectedMood, selectedOptions, sliderValues, markdownContent, isBurnerMode, executeAutosave, clearAutosaveTimer]);
 
   const handleOptionToggle = (optionId: number) => {
     setSelectedOptions((prev) =>
       prev.includes(optionId) ? prev.filter((id) => id !== optionId) : [...prev, optionId]
     );
+  };
+
+  const handleSliderChange = (groupId: number, value: number | undefined) => {
+    setSliderValues((prev) => {
+      if (value === undefined) {
+        if (!(groupId in prev)) return prev;
+        const next = { ...prev };
+        delete next[groupId];
+        return next;
+      }
+      return { ...prev, [groupId]: value };
+    });
   };
 
   const handleMoodSelection = (moodValue: MoodValue) => {
@@ -424,13 +462,14 @@ const EntryView = ({
 
     setMarkdownContent(DEFAULT_MARKDOWN);
     setSelectedOptions([]);
+    setSliderValues({});
     setSaveErrorMessage('');
     setSaveState('disabled');
 
-    const resetSnapshot = buildSnapshot({ mood: selectedMood, content: DEFAULT_MARKDOWN, selectedOptions: [] });
+    const resetSnapshot = buildSnapshot({ mood: selectedMood, content: DEFAULT_MARKDOWN, selectedOptions: [], sliderValues: {} });
     lastSavedSnapshotRef.current = resetSnapshot;
     latestPayloadRef.current = {
-      payload: { mood: selectedMood ? Number(selectedMood) : null, content: DEFAULT_MARKDOWN, selected_options: [] },
+      payload: { mood: selectedMood ? Number(selectedMood) : null, content: DEFAULT_MARKDOWN, selected_options: [], slider_values: {} },
       snapshot: resetSnapshot,
     };
   };
@@ -553,6 +592,8 @@ const EntryView = ({
             groups={groups}
             selectedOptions={selectedOptions}
             onOptionToggle={handleOptionToggle}
+            sliderValues={sliderValues}
+            onSliderChange={handleSliderChange}
           />
         </div>
 

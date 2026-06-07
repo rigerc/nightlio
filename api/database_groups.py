@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import Any, Dict, List, Optional
 
@@ -18,29 +19,53 @@ class GroupsMixin(DatabaseConnectionMixin):
         with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
-                "SELECT id, name, color, icon, sort_order FROM groups ORDER BY sort_order ASC, name ASC"
+                """
+                SELECT id, name, color, icon, sort_order, type, slider_min, slider_max, slider_labels
+                  FROM groups
+                 ORDER BY sort_order ASC, name ASC
+                """
             )
             groups: List[Dict] = []
             for group_row in cursor.fetchall():
                 group = dict(group_row)
-                options_cursor = conn.execute(
-                    """
-                    SELECT id, name, icon, sort_order
-                      FROM group_options
-                     WHERE group_id = ?
-                     ORDER BY sort_order ASC, name ASC
-                    """,
-                    (group["id"],),
-                )
-                group["options"] = [
-                    dict(option_row) for option_row in options_cursor.fetchall()
-                ]
+                group["slider_labels"] = _decode_slider_labels(group.get("slider_labels"))
+                if group.get("type") == "slider":
+                    group["options"] = []
+                else:
+                    options_cursor = conn.execute(
+                        """
+                        SELECT id, name, icon, sort_order
+                          FROM group_options
+                         WHERE group_id = ?
+                         ORDER BY sort_order ASC, name ASC
+                        """,
+                        (group["id"],),
+                    )
+                    group["options"] = [
+                        dict(option_row) for option_row in options_cursor.fetchall()
+                    ]
                 groups.append(group)
             return groups
 
-    def create_group(self, name: str) -> int:
+    def create_group(
+        self,
+        name: str,
+        type: str = "category",
+        slider_min: Optional[int] = None,
+        slider_max: Optional[int] = None,
+        slider_labels: Optional[List[str]] = None,
+    ) -> int:
         with self._connect() as conn:
-            cursor = conn.execute("INSERT INTO groups (name) VALUES (?)", (name,))
+            cursor = conn.execute(
+                "INSERT INTO groups (name, type, slider_min, slider_max, slider_labels) VALUES (?, ?, ?, ?, ?)",
+                (
+                    name,
+                    type,
+                    slider_min if slider_min is not None else 1,
+                    slider_max if slider_max is not None else 5,
+                    _encode_slider_labels(slider_labels),
+                ),
+            )
             conn.commit()
             return int(cursor.lastrowid or 0)
 
@@ -54,10 +79,12 @@ class GroupsMixin(DatabaseConnectionMixin):
             return int(cursor.lastrowid or 0)
 
     def update_group(self, group_id: int, fields: Dict[str, Any]) -> bool:
-        allowed = {"name", "color", "icon", "sort_order"}
+        allowed = {"name", "color", "icon", "sort_order", "type", "slider_min", "slider_max", "slider_labels"}
         updates = {k: v for k, v in fields.items() if k in allowed}
         if not updates:
             return False
+        if "slider_labels" in updates:
+            updates["slider_labels"] = _encode_slider_labels(updates["slider_labels"])
         set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [group_id]
         with self._connect() as conn:
@@ -135,6 +162,57 @@ class GroupsMixin(DatabaseConnectionMixin):
                 (entry_id,),
             )
             return [dict(row) for row in cursor.fetchall()]
+
+    def replace_entry_slider_values(self, entry_id: int, values: Dict[int, int]) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "DELETE FROM entry_slider_values WHERE entry_id = ?",
+                (entry_id,),
+            )
+            if values:
+                conn.executemany(
+                    "INSERT INTO entry_slider_values (entry_id, group_id, value) VALUES (?, ?, ?)",
+                    [(entry_id, group_id, value) for group_id, value in values.items()],
+                )
+            conn.commit()
+
+    def get_entry_slider_values(self, entry_id: int) -> List[Dict]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                """
+                SELECT esv.id, esv.group_id, esv.value,
+                       g.name as group_name, g.color as group_color, g.icon as group_icon,
+                       g.slider_min as slider_min, g.slider_max as slider_max, g.slider_labels as slider_labels
+                  FROM entry_slider_values esv
+                  JOIN groups g ON esv.group_id = g.id
+                 WHERE esv.entry_id = ?
+                 ORDER BY g.sort_order ASC, g.name
+                """,
+                (entry_id,),
+            )
+            rows = []
+            for row in cursor.fetchall():
+                item = dict(row)
+                item["slider_labels"] = _decode_slider_labels(item.get("slider_labels"))
+                rows.append(item)
+            return rows
+
+
+def _encode_slider_labels(labels: Optional[List[str]]) -> Optional[str]:
+    if labels is None:
+        return None
+    return json.dumps(list(labels))
+
+
+def _decode_slider_labels(raw: Optional[str]) -> Optional[List[str]]:
+    if not raw:
+        return None
+    try:
+        decoded = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    return decoded if isinstance(decoded, list) else None
 
 
 __all__ = ["GroupsMixin"]

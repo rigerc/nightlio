@@ -1,6 +1,6 @@
 import type {
-  AppConfig, AuthResponse, Entry, Goal, GoalCompletion, Group,
-  MoodCreateResponse, MoodUpdateResponse, MoodLog, Selection, Statistics, Achievement,
+  AppConfig, AuthResponse, Entry, Goal, GoalCompletion, Group, GroupType,
+  MoodCreateResponse, MoodUpdateResponse, MoodLog, Selection, SliderValue, Statistics, Achievement,
 } from '../types';
 
 function normalizeBaseUrl(raw: string | undefined): string {
@@ -121,6 +121,7 @@ class ApiService {
     content: string;
     time?: string;
     selected_options?: number[];
+    slider_values?: Record<number, number>;
   }): Promise<MoodCreateResponse> {
     return this.request<MoodCreateResponse>('/api/mood', {
       method: 'POST',
@@ -134,6 +135,7 @@ class ApiService {
     content: string;
     time: string;
     selected_options: number[];
+    slider_values: Record<number, number>;
   }>): Promise<MoodUpdateResponse> {
     return this.request<MoodUpdateResponse>(`/api/mood/${entryId}`, {
       method: 'PUT',
@@ -159,7 +161,13 @@ class ApiService {
     return this.request<Group[]>('/api/groups');
   }
 
-  createGroup(groupData: { name: string }): Promise<{ status: string; group_id: number; message: string }> {
+  createGroup(groupData: {
+    name: string;
+    type?: GroupType;
+    slider_min?: number;
+    slider_max?: number;
+    slider_labels?: string[];
+  }): Promise<{ status: string; group_id: number; message: string }> {
     return this.request<{ status: string; group_id: number; message: string }>('/api/groups', {
       method: 'POST',
       body: JSON.stringify(groupData),
@@ -173,7 +181,16 @@ class ApiService {
     });
   }
 
-  updateGroup(groupId: number, data: Partial<{ name: string; color: string; icon: string; sort_order: number }>): Promise<{ status: string; message: string }> {
+  updateGroup(groupId: number, data: Partial<{
+    name: string;
+    color: string;
+    icon: string;
+    sort_order: number;
+    type: GroupType;
+    slider_min: number;
+    slider_max: number;
+    slider_labels: string[] | null;
+  }>): Promise<{ status: string; message: string }> {
     return this.request<{ status: string; message: string }>(`/api/groups/${groupId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -215,6 +232,10 @@ class ApiService {
 
   getEntrySelections(entryId: number): Promise<Selection[]> {
     return this.request<Selection[]>(`/api/mood/${entryId}/selections`);
+  }
+
+  getEntrySliderValues(entryId: number): Promise<SliderValue[]> {
+    return this.request<SliderValue[]>(`/api/mood/${entryId}/slider-values`);
   }
 
   getMoodLogs(entryId: number): Promise<MoodLog[]> {

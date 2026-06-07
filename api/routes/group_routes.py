@@ -20,7 +20,11 @@ def create_group_routes(group_service: GroupService):
             name = data.get("name")
             if not name:
                 return jsonify({"error": "Group name is required"}), 400
-            group_id = group_service.create_group(name)
+            create_kwargs = {}
+            for field in ("type", "slider_min", "slider_max", "slider_labels"):
+                if field in data and data[field] is not None:
+                    create_kwargs[field] = data[field]
+            group_id = group_service.create_group(name, **create_kwargs)
             return jsonify({"status": "success", "group_id": group_id, "message": "Group created successfully"}), 201
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
@@ -46,7 +50,7 @@ def create_group_routes(group_service: GroupService):
     def update_group(group_id):
         try:
             data = request.json or {}
-            allowed = {"name", "color", "icon", "sort_order"}
+            allowed = {"name", "color", "icon", "sort_order", "type", "slider_min", "slider_max", "slider_labels"}
             kwargs = {k: v for k, v in data.items() if k in allowed}
             if not kwargs:
                 return jsonify({"error": "No valid fields to update"}), 400

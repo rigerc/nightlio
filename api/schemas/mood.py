@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class SelectionOut(BaseModel):
@@ -16,6 +16,7 @@ class MoodCreate(BaseModel):
     content: str
     time: Optional[str] = None
     selected_options: List[int] = []
+    slider_values: Dict[int, int] = {}
 
 
 class MoodUpdate(BaseModel):
@@ -24,6 +25,7 @@ class MoodUpdate(BaseModel):
     content: Optional[str] = None
     time: Optional[str] = None
     selected_options: Optional[List[int]] = None
+    slider_values: Optional[Dict[int, int]] = None
 
 
 class MoodCreateResponse(BaseModel):

@@ -7,7 +7,7 @@ import IconPicker from '../ui/IconPicker';
 import ColorPicker from '../ui/ColorPicker';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
-import type { Group, GroupOption } from '../../types';
+import type { Group, GroupOption, GroupType } from '../../types';
 
 const inputClass =
   'px-2.5 py-1.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--surface)] text-[var(--text)] outline-none focus:border-[var(--accent-600)] focus:ring-1 focus:ring-[var(--accent-600)]/20 transition-colors';
@@ -124,6 +124,80 @@ const ActivityChip = ({ option, isDragging, onUpdate, onDelete, onDragStart, onD
   );
 };
 
+interface SliderRangeEditorProps {
+  group: Group;
+  onUpdate: (id: number, updates: Partial<Group>) => void;
+}
+
+const SliderRangeEditor = ({ group, onUpdate }: SliderRangeEditorProps) => {
+  const min = group.slider_min ?? 1;
+  const max = group.slider_max ?? 5;
+  const stepCount = Math.max(0, max - min + 1);
+  const labels = Array.from({ length: stepCount }, (_, i) => group.slider_labels?.[i] ?? '');
+
+  const [minDraft, setMinDraft] = useState(String(min));
+  const [maxDraft, setMaxDraft] = useState(String(max));
+
+  const commitRange = () => {
+    const nextMin = parseInt(minDraft, 10);
+    const nextMax = parseInt(maxDraft, 10);
+    if (!Number.isFinite(nextMin) || !Number.isFinite(nextMax) || nextMin >= nextMax) {
+      setMinDraft(String(min));
+      setMaxDraft(String(max));
+      return;
+    }
+    const nextStepCount = nextMax - nextMin + 1;
+    const nextLabels = Array.from({ length: nextStepCount }, (_, i) => labels[i] ?? '');
+    onUpdate(group.id, { slider_min: nextMin, slider_max: nextMax, slider_labels: nextLabels });
+  };
+
+  const updateLabel = (index: number, value: string) => {
+    const nextLabels = [...labels];
+    nextLabels[index] = value;
+    onUpdate(group.id, { slider_labels: nextLabels });
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-[var(--text-muted)]">Min</label>
+        <input
+          type="number"
+          value={minDraft}
+          onChange={e => setMinDraft(e.target.value)}
+          onBlur={commitRange}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          className={cn(inputClass, 'w-20')}
+        />
+        <label className="text-xs font-medium text-[var(--text-muted)]">Max</label>
+        <input
+          type="number"
+          value={maxDraft}
+          onChange={e => setMaxDraft(e.target.value)}
+          onBlur={commitRange}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          className={cn(inputClass, 'w-20')}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="m-0 text-xs font-medium text-[var(--text-muted)]">Step labels</p>
+        {labels.map((label, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="w-6 shrink-0 text-right text-xs text-[var(--text-muted)]">{min + i}</span>
+            <input
+              type="text"
+              placeholder={`Label for ${min + i}…`}
+              value={label}
+              onChange={e => updateLabel(i, e.target.value)}
+              className={cn(inputClass, 'min-w-[160px] flex-1 text-sm')}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface GroupCardProps {
   group: Group;
   isDragging: boolean;
@@ -208,7 +282,7 @@ const GroupCard = ({ group, isDragging, onUpdate, onDelete, onDragStart, onDropO
           onClick={() => setExpanded(p => !p)}
           className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg)] hover:text-[var(--text)]"
         >
-          <span>{group.options.length} {group.options.length === 1 ? 'activity' : 'activities'}</span>
+          <span>{group.type === 'slider' ? `Slider (${group.slider_min ?? 1}–${group.slider_max ?? 5})` : `${group.options.length} ${group.options.length === 1 ? 'activity' : 'activities'}`}</span>
           <ChevronUp size={14} className={cn('transition-transform', !expanded && 'rotate-180')} />
         </button>
         <button
@@ -237,40 +311,46 @@ const GroupCard = ({ group, isDragging, onUpdate, onDelete, onDragStart, onDropO
 
       {expanded && (
         <div className="mt-3 border-t border-[var(--border)] pt-3">
-          {group.options.length === 0 && <p className="m-0 mb-2 text-xs italic text-[var(--text-muted)]">No activities yet.</p>}
-          <div className="flex flex-wrap gap-2">
-            {group.options.map(opt => (
-              <ActivityChip
-                key={opt.id}
-                option={opt}
-                isDragging={draggingOptionId === opt.id}
-                onUpdate={onUpdateOption}
-                onDelete={onDeleteOption}
-                onDragStart={setDraggingOptionId}
-                onDropOn={dropOption}
-              />
-            ))}
-          </div>
-          {addingOption ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <input
-                autoFocus
-                type="text"
-                placeholder="Activity name…"
-                value={newOptionName}
-                onChange={e => setNewOptionName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') void handleAddOption(); if (e.key === 'Escape') { setAddingOption(false); setNewOptionName(''); } }}
-                className={cn(inputClass, 'min-w-[220px] flex-1 text-sm')}
-              />
-              <Button variant="default" onClick={() => void handleAddOption()} disabled={!newOptionName.trim() || savingOption} className="text-xs py-1 px-3 h-auto">
-                {savingOption ? 'Adding…' : 'Add'}
-              </Button>
-              <button type="button" onClick={() => { setAddingOption(false); setNewOptionName(''); }} className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs">Cancel</button>
-            </div>
+          {group.type === 'slider' ? (
+            <SliderRangeEditor group={group} onUpdate={onUpdate} />
           ) : (
-            <button type="button" onClick={() => setAddingOption(true)} className="mt-3 inline-flex items-center gap-1 rounded-full border border-dashed border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--accent-600)] hover:text-[var(--accent-600)]">
-              <Plus size={13} />Add activity
-            </button>
+            <>
+              {group.options.length === 0 && <p className="m-0 mb-2 text-xs italic text-[var(--text-muted)]">No activities yet.</p>}
+              <div className="flex flex-wrap gap-2">
+                {group.options.map(opt => (
+                  <ActivityChip
+                    key={opt.id}
+                    option={opt}
+                    isDragging={draggingOptionId === opt.id}
+                    onUpdate={onUpdateOption}
+                    onDelete={onDeleteOption}
+                    onDragStart={setDraggingOptionId}
+                    onDropOn={dropOption}
+                  />
+                ))}
+              </div>
+              {addingOption ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Activity name…"
+                    value={newOptionName}
+                    onChange={e => setNewOptionName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') void handleAddOption(); if (e.key === 'Escape') { setAddingOption(false); setNewOptionName(''); } }}
+                    className={cn(inputClass, 'min-w-[220px] flex-1 text-sm')}
+                  />
+                  <Button variant="default" onClick={() => void handleAddOption()} disabled={!newOptionName.trim() || savingOption} className="text-xs py-1 px-3 h-auto">
+                    {savingOption ? 'Adding…' : 'Add'}
+                  </Button>
+                  <button type="button" onClick={() => { setAddingOption(false); setNewOptionName(''); }} className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs">Cancel</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setAddingOption(true)} className="mt-3 inline-flex items-center gap-1 rounded-full border border-dashed border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--accent-600)] hover:text-[var(--accent-600)]">
+                  <Plus size={13} />Add activity
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -282,14 +362,17 @@ const ActivityCustomizer = () => {
   const { groups, loading, createGroup, createGroupOption, updateGroup, updateGroupOption, deleteGroup, deleteGroupOption, reorderGroups, reorderGroupOptions } = useGroups();
   const [addingGroup, setAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupType, setNewGroupType] = useState<GroupType>('category');
   const [savingGroup, setSavingGroup] = useState(false);
   const [draggingGroupId, setDraggingGroupId] = useState<number | null>(null);
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return;
     setSavingGroup(true);
-    const ok = await createGroup(newGroupName.trim());
-    if (ok) { setNewGroupName(''); setAddingGroup(false); }
+    const ok = newGroupType === 'slider'
+      ? await createGroup(newGroupName.trim(), { type: 'slider', slider_min: 1, slider_max: 5, slider_labels: ['', '', '', '', ''] })
+      : await createGroup(newGroupName.trim());
+    if (ok) { setNewGroupName(''); setNewGroupType('category'); setAddingGroup(false); }
     setSavingGroup(false);
   };
 
@@ -323,20 +406,38 @@ const ActivityCustomizer = () => {
       </div>
 
       {addingGroup ? (
-        <div className="flex flex-wrap gap-2 mt-3">
-          <input
-            autoFocus
-            type="text"
-            placeholder="Category name (e.g., Weather, Social)…"
-            value={newGroupName}
-            onChange={e => setNewGroupName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') void handleAddGroup(); if (e.key === 'Escape') { setAddingGroup(false); setNewGroupName(''); } }}
-            className={cn(inputClass, 'min-w-[240px] flex-1')}
-          />
-          <Button variant="default" onClick={() => void handleAddGroup()} disabled={!newGroupName.trim() || savingGroup} className="shrink-0">
-            {savingGroup ? 'Creating…' : 'Create'}
-          </Button>
-          <button type="button" onClick={() => { setAddingGroup(false); setNewGroupName(''); }} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]">Cancel</button>
+        <div className="flex flex-col gap-2 mt-3">
+          <div className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5 text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => setNewGroupType('category')}
+              className={cn('rounded-full px-3 py-1 transition-colors', newGroupType === 'category' ? 'bg-[var(--accent-bg)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]')}
+            >
+              Category
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewGroupType('slider')}
+              className={cn('rounded-full px-3 py-1 transition-colors', newGroupType === 'slider' ? 'bg-[var(--accent-bg)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]')}
+            >
+              Slider
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              autoFocus
+              type="text"
+              placeholder={newGroupType === 'slider' ? 'Slider name (e.g., Sleep Quality)…' : 'Category name (e.g., Weather, Social)…'}
+              value={newGroupName}
+              onChange={e => setNewGroupName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') void handleAddGroup(); if (e.key === 'Escape') { setAddingGroup(false); setNewGroupName(''); } }}
+              className={cn(inputClass, 'min-w-[240px] flex-1')}
+            />
+            <Button variant="default" onClick={() => void handleAddGroup()} disabled={!newGroupName.trim() || savingGroup} className="shrink-0">
+              {savingGroup ? 'Creating…' : 'Create'}
+            </Button>
+            <button type="button" onClick={() => { setAddingGroup(false); setNewGroupName(''); setNewGroupType('category'); }} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]">Cancel</button>
+          </div>
         </div>
       ) : (
         <Button variant="default" onClick={() => setAddingGroup(true)} className="mt-3 gap-2 rounded-full">

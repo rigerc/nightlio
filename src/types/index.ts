@@ -15,6 +15,20 @@ export interface Selection {
   group_color?: string | null;
 }
 
+export type GroupType = 'category' | 'slider';
+
+export interface SliderValue {
+  id: number;
+  group_id: number;
+  group_name: string;
+  group_color?: string | null;
+  group_icon?: string | null;
+  value: number;
+  slider_min: number;
+  slider_max: number;
+  slider_labels?: string[] | null;
+}
+
 export interface Entry {
   id: number;
   mood: MoodValue;
@@ -23,6 +37,7 @@ export interface Entry {
   created_at: string;
   updated_at?: string;
   selections: Selection[];
+  slider_values?: SliderValue[];
   fitness?: FitnessDataPoint[];
 }
 
@@ -40,6 +55,10 @@ export interface Group {
   color?: string;
   icon?: string;
   sort_order: number;
+  type: GroupType;
+  slider_min?: number;
+  slider_max?: number;
+  slider_labels?: string[] | null;
   options: GroupOption[];
 }
 

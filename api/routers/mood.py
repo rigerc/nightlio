@@ -28,6 +28,7 @@ def create_mood_router(mood_service: MoodService, fitness_service=None) -> APIRo
                 body.content,
                 body.time,
                 body.selected_options,
+                body.slider_values,
             )
             return {
                 "status": "success",
@@ -106,6 +107,7 @@ def create_mood_router(mood_service: MoodService, fitness_service=None) -> APIRo
                 date=fields.get('date'),
                 time=fields.get('time'),
                 selected_options=fields.get('selected_options'),
+                slider_values=fields.get('slider_values'),
             )
             if updated is None:
                 raise HTTPException(status_code=404, detail="Entry not found or no changes made")
@@ -155,6 +157,13 @@ def create_mood_router(mood_service: MoodService, fitness_service=None) -> APIRo
     def get_entry_selections(entry_id: int, user_id: int = Depends(get_current_user_id)):
         try:
             return mood_service.get_entry_selections(user_id, entry_id)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @router.get("/mood/{entry_id}/slider-values")
+    def get_entry_slider_values(entry_id: int, user_id: int = Depends(get_current_user_id)):
+        try:
+            return mood_service.get_entry_slider_values(user_id, entry_id)
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 

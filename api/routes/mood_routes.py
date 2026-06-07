@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from flask import Blueprint, request, jsonify
 from api.services.mood_service import MoodService
 from api.utils.auth_middleware import require_auth, get_current_user_id
@@ -19,6 +19,21 @@ def _normalise_selected_options(
         raise ValueError("selected_options must contain integers") from exc
 
 
+def _normalise_slider_values(
+    raw: Any, *, allow_none: bool = False
+) -> Optional[Dict[int, int]]:
+    if raw is None:
+        return None if allow_none else {}
+
+    if not isinstance(raw, dict):
+        raise ValueError("slider_values must be an object mapping group ids to values")
+
+    try:
+        return {int(group_id): int(value) for group_id, value in raw.items()}
+    except (TypeError, ValueError) as exc:
+        raise ValueError("slider_values must map integer group ids to integer values") from exc
+
+
 def create_mood_routes(mood_service: MoodService):
     mood_bp = Blueprint("mood", __name__)
 
@@ -35,6 +50,7 @@ def create_mood_routes(mood_service: MoodService):
             content = data.get("content")
             time = data.get("time")
             selected_options_raw = data.get("selected_options", [])
+            slider_values_raw = data.get("slider_values", {})
 
             # Validate input
             if not all([mood, date, content]):
@@ -52,6 +68,7 @@ def create_mood_routes(mood_service: MoodService):
 
             try:
                 selected_options = _normalise_selected_options(selected_options_raw)
+                slider_values = _normalise_slider_values(slider_values_raw)
             except ValueError as exc:
                 return jsonify({"error": str(exc)}), 400
 
@@ -62,6 +79,7 @@ def create_mood_routes(mood_service: MoodService):
                 content_value,
                 time_value,
                 selected_options,
+                slider_values,
             )
 
             return (
@@ -143,12 +161,25 @@ def create_mood_routes(mood_service: MoodService):
                     [] if normalised_options is None else normalised_options
                 )
 
+            slider_values = None
+            if "slider_values" in data:
+                try:
+                    normalised_slider_values = _normalise_slider_values(
+                        data.get("slider_values"), allow_none=True
+                    )
+                except ValueError as exc:
+                    return jsonify({"error": str(exc)}), 400
+                slider_values = (
+                    {} if normalised_slider_values is None else normalised_slider_values
+                )
+
             if (
                 mood is None
                 and content is None
                 and date is None
                 and time is None
                 and "selected_options" not in data
+                and "slider_values" not in data
             ):
                 return jsonify({"error": "No update fields provided"}), 400
 
@@ -171,6 +202,7 @@ def create_mood_routes(mood_service: MoodService):
                 date=date_value,
                 time=time_value,
                 selected_options=selected_options,
+                slider_values=slider_values,
             )
 
             if updated_entry is None:
@@ -251,6 +283,19 @@ def create_mood_routes(mood_service: MoodService):
                 return jsonify({"error": "Unauthorized"}), 401
             selections = mood_service.get_entry_selections(user_id, entry_id)
             return jsonify(selections)
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @mood_bp.route("/mood/<int:entry_id>/slider-values", methods=["GET"])
+    @require_auth
+    def get_entry_slider_values(entry_id):
+        try:
+            user_id = get_current_user_id()
+            if user_id is None:
+                return jsonify({"error": "Unauthorized"}), 401
+            slider_values = mood_service.get_entry_slider_values(user_id, entry_id)
+            return jsonify(slider_values)
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500

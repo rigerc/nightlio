@@ -5,6 +5,7 @@ import { getIconComponent } from '../../utils/iconRegistry';
 import apiService from '../../services/api';
 import { useToast } from '../ui/ToastProvider';
 import EntryModal from './EntryModal';
+import SliderValueBar from '../groups/SliderValueBar';
 import type { Entry, Group } from '../../types';
 
 const stripMd = (s = '') => s
@@ -139,6 +140,14 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
 
       <div className="entry-card__title">{title || 'Entry'}</div>
       {excerpt && <div className="entry-card__excerpt">{excerpt}</div>}
+
+      {entry.slider_values && entry.slider_values.length > 0 && (
+        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {entry.slider_values.map(sliderValue => (
+            <SliderValueBar key={sliderValue.id} sliderValue={sliderValue} />
+          ))}
+        </div>
+      )}
 
       {entry.selections && entry.selections.length > 0 && (
         <div style={{ marginTop: '0.75rem' }}>

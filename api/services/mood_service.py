@@ -16,6 +16,8 @@ class MoodService:
         time: Optional[str] = None,
         selected_options: Optional[List[int]] = None,
         slider_values: Optional[Dict[int, int]] = None,
+        is_important: Optional[bool] = None,
+        important_reason: Optional[str] = None,
     ) -> Dict:
         """Create a new mood entry and check for achievements"""
         if not (1 <= mood <= 5):
@@ -24,8 +26,12 @@ class MoodService:
         if not content.strip():
             raise ValueError("Content cannot be empty")
 
+        if is_important and not (important_reason or "").strip():
+            raise ValueError("Please provide a reason for marking this day important")
+
         entry_id = self.db.add_mood_entry(
-            user_id, date, mood, content, time, selected_options, slider_values
+            user_id, date, mood, content, time, selected_options, slider_values,
+            is_important, important_reason,
         )
 
         # Check for new achievements
@@ -57,6 +63,8 @@ class MoodService:
         time: Optional[str] = None,
         selected_options: Optional[List[int]] = None,
         slider_values: Optional[Dict[int, int]] = None,
+        is_important: Optional[bool] = None,
+        important_reason: Optional[str] = None,
     ) -> Optional[Dict]:
         """Update an existing mood entry for a user and return the updated record"""
         if mood is not None and not (1 <= mood <= 5):
@@ -64,6 +72,9 @@ class MoodService:
 
         if content is not None and not content.strip():
             raise ValueError("Content cannot be empty")
+
+        if is_important and not (important_reason or "").strip():
+            raise ValueError("Please provide a reason for marking this day important")
 
         updated = self.db.update_mood_entry(
             user_id,
@@ -74,6 +85,8 @@ class MoodService:
             time=time,
             selected_options=selected_options,
             slider_values=slider_values,
+            is_important=is_important,
+            important_reason=important_reason,
         )
 
         if not updated:

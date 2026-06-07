@@ -17,6 +17,8 @@ class MoodCreate(BaseModel):
     time: Optional[str] = None
     selected_options: List[int] = []
     slider_values: Dict[int, int] = {}
+    is_important: Optional[bool] = None
+    important_reason: Optional[str] = None
 
 
 class MoodUpdate(BaseModel):
@@ -26,6 +28,8 @@ class MoodUpdate(BaseModel):
     time: Optional[str] = None
     selected_options: Optional[List[int]] = None
     slider_values: Optional[Dict[int, int]] = None
+    is_important: Optional[bool] = None
+    important_reason: Optional[str] = None
 
 
 class MoodCreateResponse(BaseModel):

@@ -8,6 +8,7 @@ import {
   Clock3,
   CloudOff,
   Loader2,
+  Star,
 } from 'lucide-react';
 import MoodPicker from '../components/mood/MoodPicker';
 import MoodDisplay from '../components/mood/MoodDisplay';
@@ -119,6 +120,8 @@ const EntryView = ({
   const [entryDateInput, setEntryDateInput] = useState<string>(() =>
     editingEntry ? dateToInputValue(editingEntry.date) : ''
   );
+  const [isImportant, setIsImportant] = useState<boolean>(editingEntry?.is_important ?? false);
+  const [importantReason, setImportantReason] = useState<string>(editingEntry?.important_reason ?? '');
 
   const markdownRef = useRef<MarkdownAreaRef | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,6 +164,8 @@ const EntryView = ({
       setActiveEntryId(editingEntry.id);
       setMarkdownContent(content);
       setEntryDateInput(dateToInputValue(editingEntry.date));
+      setIsImportant(editingEntry.is_important ?? false);
+      setImportantReason(editingEntry.important_reason ?? '');
 
       isHydratingEditorRef.current = true;
       const instance = markdownRef.current?.getInstance?.();
@@ -185,6 +190,8 @@ const EntryView = ({
     setSliderValues({});
     setActiveEntryId(null);
     setMarkdownContent(DEFAULT_MARKDOWN);
+    setIsImportant(false);
+    setImportantReason('');
     createdByAutosaveRef.current = false;
     skipAutosaveFlushRef.current = false;
 
@@ -455,6 +462,33 @@ const EntryView = ({
     }
   };
 
+  const handleImportantToggle = async (checked: boolean) => {
+    setIsImportant(checked);
+    if (checked || !activeEntryIdRef.current) return;
+    try {
+      await apiService.updateMoodEntry(activeEntryIdRef.current, { is_important: false });
+      onEntryUpdated({ id: activeEntryIdRef.current, is_important: false }, { navigateAfterSave: false, refreshAfterSave: false });
+      show('Unmarked as important', 'success');
+    } catch {
+      show('Failed to update', 'error');
+    }
+  };
+
+  const commitImportantReason = async () => {
+    const trimmed = importantReason.trim();
+    if (!isImportant || !trimmed || !activeEntryIdRef.current) return;
+    try {
+      await apiService.updateMoodEntry(activeEntryIdRef.current, { is_important: true, important_reason: trimmed });
+      onEntryUpdated(
+        { id: activeEntryIdRef.current, is_important: true, important_reason: trimmed },
+        { navigateAfterSave: false, refreshAfterSave: false }
+      );
+      show('Marked as important', 'success');
+    } catch {
+      show('Failed to mark as important', 'error');
+    }
+  };
+
   const resetDraftComposer = () => {
     isHydratingEditorRef.current = true;
     markdownRef.current?.getInstance?.()?.setMarkdown(DEFAULT_MARKDOWN);
@@ -557,6 +591,57 @@ const EntryView = ({
                   fontFamily: 'inherit',
                 }}
               />
+            </div>
+          )}
+          {isEditing && editingEntry && (
+            <div style={{
+              marginBottom: '1rem',
+              fontSize: '0.85rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+            }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none', width: 'fit-content' }}>
+                <input
+                  type="checkbox"
+                  checked={isImportant}
+                  onChange={(e) => handleImportantToggle(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <Star
+                  size={15}
+                  strokeWidth={1.75}
+                  style={{ color: 'var(--important-color)', fill: isImportant ? 'var(--important-color)' : 'none' }}
+                  aria-hidden="true"
+                />
+                <span style={{ color: isImportant ? 'var(--important-color-2)' : 'var(--text)', fontWeight: isImportant ? 600 : 400 }}>
+                  Mark this day as important
+                </span>
+              </label>
+              {isImportant && (
+                <input
+                  type="text"
+                  value={importantReason}
+                  onChange={(e) => setImportantReason(e.target.value)}
+                  onBlur={commitImportantReason}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  placeholder="Why is this day important? (e.g. Birthday, Anniversary…)"
+                  style={{
+                    border: '1px solid var(--important-border)',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    fontSize: '0.85rem',
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              )}
+              {isImportant && !importantReason.trim() && (
+                <span style={{ color: 'color-mix(in oklab, var(--text), transparent 40%)', fontSize: '0.78rem' }}>
+                  Add a reason to save this as an important day.
+                </span>
+              )}
             </div>
           )}
           <div style={{ marginBottom: '1rem' }}>

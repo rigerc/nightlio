@@ -86,6 +86,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             self._migrate_groups_schema()
             self._migrate_group_options_schema()
             self._migrate_entry_selections_source()
+            self._migrate_important_day_field()
             self._migrate_user_preferences_schema()
             self._add_missing_default_groups()
             self._seed_default_group_colors()
@@ -446,6 +447,24 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                     logger.info("entry_selections.source column added")
         except sqlite3.Error as exc:
             logger.warning("entry_selections source migration failed (non-critical): %s", exc)
+
+    def _migrate_important_day_field(self) -> None:
+        try:
+            with self._connect() as conn:
+                cur = conn.execute("PRAGMA table_info(mood_entries)")
+                cols = {row[1] for row in cur.fetchall()}
+                if "is_important" not in cols:
+                    conn.execute(
+                        "ALTER TABLE mood_entries ADD COLUMN is_important INTEGER NOT NULL DEFAULT 0"
+                    )
+                if "important_reason" not in cols:
+                    conn.execute(
+                        "ALTER TABLE mood_entries ADD COLUMN important_reason TEXT DEFAULT NULL"
+                    )
+                conn.commit()
+                logger.info("Important day fields migration complete")
+        except sqlite3.Error as exc:
+            logger.warning("Important day migration failed (non-critical): %s", exc)
 
     def _create_database_indexes(self, conn: sqlite3.Connection) -> None:
         try:

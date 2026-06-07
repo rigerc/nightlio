@@ -87,6 +87,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             self._migrate_entry_selections_source()
             self._migrate_user_preferences_schema()
             self._add_missing_default_groups()
+            self._add_missing_default_options()
             self._seed_default_group_colors()
             self._seed_default_group_icons()
         except Exception as exc:  # pragma: no cover - initialization rarely fails
@@ -446,7 +447,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 "irritated", "angry", "stressed", "sad",
             ],
             "Sleep": [
-                "well-rested", "refreshed", "napped",
+                "well-rested", "refreshed", "napped", "relaxed", "downtime",
                 "tired", "groggy", "exhausted", "restless",
             ],
             "Productivity": [
@@ -458,8 +459,8 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 "sick", "sore", "sluggish",
             ],
             "Social": [
-                "connected", "social", "supported",
-                "isolated", "lonely", "missing someone",
+                "connected", "social", "supported", "family time", "quality time",
+                "isolated", "missing someone",
             ],
             "Romance": [
                 "loved", "affectionate", "romantic", "intimate",
@@ -471,7 +472,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             ],
             "Mental": [
                 "meditated", "journaled", "mindful", "therapy",
-                "scattered", "racing thoughts", "burned out",
+                "racing thoughts", "burned out",
             ],
             "Chores": [
                 "cleaned", "cooked", "groceries", "laundry", "tidied",
@@ -479,7 +480,7 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
             ],
             "Hobbies": [
                 "read", "gamed", "creative", "music", "art", "crafts",
-                "outdoor", "learned something new",
+                "outdoor", "watched a show/movie", "learned something new",
             ],
             "Food": [
                 "ate well", "balanced meals", "cooked at home",
@@ -575,6 +576,44 @@ class DatabaseSchemaMixin(DatabaseConnectionMixin):
                 logger.info("Missing default groups added")
         except sqlite3.Error as exc:
             logger.warning("Adding missing default groups failed (non-critical): %s", exc)
+
+    def _add_missing_default_options(self) -> None:
+        """Backfill newly-curated default tags into existing groups (additive only).
+
+        Existing installs keep whatever options they already have — this only adds
+        tags that close real gaps in the default set (family/quality time, rest &
+        relaxation, entertainment), it never removes or renames anything.
+        """
+        new_options = {
+            "Sleep": ["relaxed", "downtime"],
+            "Social": ["family time", "quality time"],
+            "Hobbies": ["watched a show/movie"],
+        }
+        try:
+            with self._connect() as conn:
+                for group_name, options in new_options.items():
+                    cursor = conn.execute(
+                        "SELECT id FROM groups WHERE name = ?", (group_name,)
+                    )
+                    row = cursor.fetchone()
+                    if not row:
+                        continue
+                    group_id = row[0]
+                    for option in options:
+                        cursor = conn.execute(
+                            "SELECT id FROM group_options WHERE group_id = ? AND name = ?",
+                            (group_id, option),
+                        )
+                        if cursor.fetchone():
+                            continue
+                        conn.execute(
+                            "INSERT INTO group_options (group_id, name) VALUES (?, ?)",
+                            (group_id, option),
+                        )
+                conn.commit()
+                logger.info("Missing default options added")
+        except sqlite3.Error as exc:
+            logger.warning("Adding missing default options failed (non-critical): %s", exc)
 
     def _seed_default_group_icons(self) -> None:
         """Set icons on default groups and activities that have no icon yet."""

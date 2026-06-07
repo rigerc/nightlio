@@ -12,6 +12,7 @@ import {
 import MoodPicker from '../components/mood/MoodPicker';
 import MoodDisplay from '../components/mood/MoodDisplay';
 import MoodLogList from '../components/mood/MoodLogList';
+import ReflectionPrompt from '../components/journal/ReflectionPrompt';
 import GroupSelector from '../components/groups/GroupSelector';
 import MDArea from '../components/MarkdownArea';
 import type { MarkdownAreaRef } from '../components/MarkdownArea';
@@ -549,6 +550,15 @@ const EntryView = ({
               onMoodUpdated={(newMood) => onEditMoodSelect?.(newMood)}
             />
           )}
+          {groups.length > 0 && (
+            <p style={{
+              margin: '0.75rem 0 0.25rem',
+              fontSize: '0.8rem',
+              color: 'color-mix(in oklab, var(--text), transparent 40%)',
+            }}>
+              What shaped your mood today? Sleep, people, work, movement — whatever stands out.
+            </p>
+          )}
           <GroupSelector
             groups={groups}
             selectedOptions={selectedOptions}
@@ -557,6 +567,7 @@ const EntryView = ({
         </div>
 
         <div className="entry-right">
+          <ReflectionPrompt />
           <MDArea
             ref={markdownRef}
             initialMarkdown={editingEntry?.content || DEFAULT_MARKDOWN}

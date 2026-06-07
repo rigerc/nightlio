@@ -197,6 +197,15 @@ const SettingsView = () => {
           );
         })}
       </section>
+
+      <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Support">
+        <h3 className="mt-0 mb-1 text-[var(--text)]">Support</h3>
+        <p className="mt-0 mb-0 text-[var(--text-muted)] text-sm">
+          If you're going through a hard time, you don't have to go through it alone — directories
+          like <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer" className="text-[var(--accent-600)] underline">findahelpline.com</a> can
+          connect you with someone to talk to, wherever you are.
+        </p>
+      </section>
     </div>
   );
 };

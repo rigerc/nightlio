@@ -18,6 +18,75 @@ const formatLogTime = (logged_at: string): string => {
   }
 };
 
+const TRAJECTORY_DOT_SIZE = 8;
+const TRAJECTORY_MAX_OFFSET = 26;
+
+// A lightweight same-day mood arc — lets people *see* their emotional history at the
+// within-day grain (guideline #3), and makes the averaged headline mood interpretable
+// rather than opaque (a volatile day can collapse into a misleadingly "neutral" average).
+const MoodTrajectory = ({ logs }: { logs: MoodLog[] }) => {
+  if (logs.length < 2) return null;
+
+  return (
+    <div style={{ marginBottom: '0.6rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '0.4rem',
+          height: TRAJECTORY_MAX_OFFSET + TRAJECTORY_DOT_SIZE,
+          padding: '0 2px',
+        }}
+      >
+        {logs.map((log) => {
+          const { color } = getMoodIcon(log.mood);
+          const offset = ((log.mood - 1) / 4) * TRAJECTORY_MAX_OFFSET;
+          return (
+            <div
+              key={log.id}
+              title={`${getMoodLabel(log.mood)} at ${formatLogTime(log.logged_at)}`}
+              style={{
+                width: TRAJECTORY_DOT_SIZE,
+                height: TRAJECTORY_DOT_SIZE,
+                borderRadius: '50%',
+                background: color,
+                marginBottom: `${offset}px`,
+                flexShrink: 0,
+              }}
+            />
+          );
+        })}
+      </div>
+      <div style={{
+        fontSize: '0.7rem',
+        color: 'color-mix(in oklab, var(--text), transparent 50%)',
+        marginTop: '2px',
+      }}>
+        Today's mood arc — left is earliest, right is most recent
+      </div>
+    </div>
+  );
+};
+
+// Reflection prompts scoped to the moment of a repeat check-in — more contextually
+// relevant than a generic end-of-entry prompt, and entirely optional/skippable.
+const CHECK_IN_PROMPTS: readonly string[] = Object.freeze([
+  'What changed since your last check-in?',
+  'What happened just before this feeling came up?',
+  'Is this feeling different from how you started the day?',
+]);
+
+const CheckInPrompt = ({ index }: { index: number }) => (
+  <p style={{
+    margin: '0 0 0.5rem',
+    fontSize: '0.78rem',
+    fontStyle: 'italic',
+    color: 'color-mix(in oklab, var(--text), transparent 45%)',
+  }}>
+    {CHECK_IN_PROMPTS[index % CHECK_IN_PROMPTS.length]}
+  </p>
+);
+
 const MoodLogList = ({ entryId, onMoodUpdated }: MoodLogListProps) => {
   const [logs, setLogs] = useState<MoodLog[]>([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -108,6 +177,8 @@ const MoodLogList = ({ entryId, onMoodUpdated }: MoodLogListProps) => {
         )}
       </div>
 
+      <MoodTrajectory logs={logs} />
+
       {logs.length > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           {logs.map((log) => {
@@ -157,6 +228,7 @@ const MoodLogList = ({ entryId, onMoodUpdated }: MoodLogListProps) => {
           <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'color-mix(in oklab, var(--text), transparent 30%)' }}>
             How are you feeling now?
           </p>
+          {logs.length > 0 && <CheckInPrompt index={logs.length - 1} />}
           <div className="mood-grid" style={{ gap: '0.4rem' }}>
             {MOODS.map((mood) => {
               const IconComponent = getMoodIconComponent(mood.value);

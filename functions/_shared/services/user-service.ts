@@ -14,6 +14,11 @@ export async function getUserByGoogleId(db: Database, googleId: string): Promise
   return row ?? null;
 }
 
+export async function getUserByClerkUserId(db: Database, clerkUserId: string): Promise<UserRecord | null> {
+  const row = await db.query.users.findFirst({ where: eq(users.clerkUserId, clerkUserId) });
+  return row ?? null;
+}
+
 export async function updateLastLogin(db: Database, userId: number): Promise<void> {
   await db.update(users).set({ lastLogin: sql`CURRENT_TIMESTAMP` }).where(eq(users.id, userId));
 }
@@ -60,6 +65,40 @@ export async function upsertUserByGoogleId(
     .returning();
 
   return row ?? null;
+}
+
+export async function getOrCreateClerkUser(
+  db: Database,
+  clerkUserId: string,
+  email?: string | null,
+  name?: string | null,
+  avatarUrl?: string | null
+): Promise<UserRecord | null> {
+  const existing = await getUserByClerkUserId(db, clerkUserId);
+  if (existing) {
+    await db
+      .update(users)
+      .set({
+        email: email ?? existing.email,
+        name: name ?? existing.name,
+        avatarUrl: avatarUrl ?? existing.avatarUrl,
+        lastLogin: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(eq(users.id, existing.id));
+    return getUserById(db, existing.id);
+  }
+
+  const [inserted] = await db
+    .insert(users)
+    .values({
+      googleId: clerkUserId,
+      clerkUserId,
+      email: email ?? `${clerkUserId}@clerk.local`,
+      name: name ?? 'Me',
+      avatarUrl: avatarUrl ?? null,
+    })
+    .returning({ id: users.id });
+  return getUserById(db, inserted.id);
 }
 
 export async function ensureLocalUser(

@@ -1,4 +1,4 @@
-import { and, asc, between, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, between, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { toBatch, type Database } from '../db/client';
 import {
@@ -78,6 +78,36 @@ function assertImportantReason(isImportant: boolean | undefined, importantReason
   }
 }
 
+async function assertUserOwnedEntryFields(
+  db: Database,
+  userId: number,
+  selectedOptions: number[],
+  sliderValues: Record<number, number>
+): Promise<void> {
+  const uniqueOptionIds = [...new Set(selectedOptions)];
+  if (uniqueOptionIds.length > 0) {
+    const rows = await db
+      .select({ id: groupOptions.id })
+      .from(groupOptions)
+      .innerJoin(groups, eq(groupOptions.groupId, groups.id))
+      .where(and(eq(groups.userId, userId), inArray(groupOptions.id, uniqueOptionIds)));
+    if (rows.length !== uniqueOptionIds.length) {
+      throw new ValidationError('One or more selected options are not available for this user');
+    }
+  }
+
+  const groupIds = [...new Set(Object.keys(sliderValues).map(Number).filter(Number.isFinite))];
+  if (groupIds.length > 0) {
+    const rows = await db
+      .select({ id: groups.id })
+      .from(groups)
+      .where(and(eq(groups.userId, userId), inArray(groups.id, groupIds)));
+    if (rows.length !== groupIds.length) {
+      throw new ValidationError('One or more sliders are not available for this user');
+    }
+  }
+}
+
 export async function getEntrySelections(db: Database, entryId: number): Promise<EntrySelectionRecord[]> {
   const rows = await db
     .select({
@@ -127,6 +157,7 @@ export async function createMoodEntry(db: Database, userId: number, input: MoodC
   const isImportant = Boolean(input.is_important);
   const selectedOptions = input.selected_options ?? [];
   const sliderValues = input.slider_values ?? {};
+  await assertUserOwnedEntryFields(db, userId, selectedOptions, sliderValues);
 
   const [inserted] = await db
     .insert(moodEntries)
@@ -225,6 +256,10 @@ export async function updateEntry(db: Database, userId: number, entryId: number,
   });
   if (!existing) {
     return null;
+  }
+
+  if (input.selected_options !== undefined || input.slider_values !== undefined) {
+    await assertUserOwnedEntryFields(db, userId, input.selected_options ?? [], input.slider_values ?? {});
   }
 
   const updates: Record<string, unknown> = {};

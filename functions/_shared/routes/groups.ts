@@ -39,27 +39,31 @@ function asValidationError<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 groupRoutes.get('/groups', async (c) => {
+  const userId = c.get('userId');
   const db = createDb(c.env.DB);
-  return c.json(await getAllGroups(db));
+  return c.json(await getAllGroups(db, userId));
 });
 
 groupRoutes.post('/groups', zValidator('json', groupCreateSchema), async (c) => {
+  const userId = c.get('userId');
   const body = c.req.valid('json');
   const db = createDb(c.env.DB);
 
-  const groupId = await asValidationError(() => createGroup(db, body));
+  const groupId = await asValidationError(() => createGroup(db, userId, body));
   return c.json({ status: 'success', group_id: groupId, message: 'Group created successfully' }, 201);
 });
 
 groupRoutes.post('/groups/reorder', zValidator('json', reorderRequestSchema), async (c) => {
+  const userId = c.get('userId');
   const { ordered_ids: orderedIds } = c.req.valid('json');
   const db = createDb(c.env.DB);
 
-  await reorderGroups(db, orderedIds);
+  await asValidationError(() => reorderGroups(db, userId, orderedIds));
   return c.json({ status: 'success' });
 });
 
 groupRoutes.patch('/groups/:group_id', zValidator('param', groupIdParamSchema), zValidator('json', groupUpdateSchema), async (c) => {
+  const userId = c.get('userId');
   const { group_id: groupId } = c.req.valid('param');
   const body = c.req.valid('json');
   const db = createDb(c.env.DB);
@@ -68,7 +72,7 @@ groupRoutes.patch('/groups/:group_id', zValidator('param', groupIdParamSchema), 
     throw new HTTPException(400, { message: 'No valid fields to update' });
   }
 
-  const success = await asValidationError(() => updateGroup(db, groupId, body));
+  const success = await asValidationError(() => updateGroup(db, userId, groupId, body));
   if (!success) {
     throw new HTTPException(404, { message: 'Group not found' });
   }
@@ -76,10 +80,11 @@ groupRoutes.patch('/groups/:group_id', zValidator('param', groupIdParamSchema), 
 });
 
 groupRoutes.delete('/groups/:group_id', zValidator('param', groupIdParamSchema), async (c) => {
+  const userId = c.get('userId');
   const { group_id: groupId } = c.req.valid('param');
   const db = createDb(c.env.DB);
 
-  const success = await deleteGroup(db, groupId);
+  const success = await deleteGroup(db, userId, groupId);
   if (!success) {
     throw new HTTPException(404, { message: 'Group not found' });
   }
@@ -87,11 +92,12 @@ groupRoutes.delete('/groups/:group_id', zValidator('param', groupIdParamSchema),
 });
 
 groupRoutes.post('/groups/:group_id/options', zValidator('param', groupIdParamSchema), zValidator('json', optionCreateSchema), async (c) => {
+  const userId = c.get('userId');
   const { group_id: groupId } = c.req.valid('param');
   const { name } = c.req.valid('json');
   const db = createDb(c.env.DB);
 
-  const optionId = await asValidationError(() => createGroupOption(db, groupId, name));
+  const optionId = await asValidationError(() => createGroupOption(db, userId, groupId, name));
   return c.json({ status: 'success', option_id: optionId, message: 'Option created successfully' }, 201);
 });
 
@@ -100,16 +106,18 @@ groupRoutes.post(
   zValidator('param', groupIdParamSchema),
   zValidator('json', reorderRequestSchema),
   async (c) => {
+    const userId = c.get('userId');
     const { group_id: groupId } = c.req.valid('param');
     const { ordered_ids: orderedIds } = c.req.valid('json');
     const db = createDb(c.env.DB);
 
-    await reorderGroupOptions(db, groupId, orderedIds);
+    await asValidationError(() => reorderGroupOptions(db, userId, groupId, orderedIds));
     return c.json({ status: 'success' });
   }
 );
 
 groupRoutes.patch('/options/:option_id', zValidator('param', optionIdParamSchema), zValidator('json', optionUpdateSchema), async (c) => {
+  const userId = c.get('userId');
   const { option_id: optionId } = c.req.valid('param');
   const body = c.req.valid('json');
   const db = createDb(c.env.DB);
@@ -118,7 +126,7 @@ groupRoutes.patch('/options/:option_id', zValidator('param', optionIdParamSchema
     throw new HTTPException(400, { message: 'No valid fields to update' });
   }
 
-  const success = await asValidationError(() => updateGroupOption(db, optionId, body));
+  const success = await asValidationError(() => updateGroupOption(db, userId, optionId, body));
   if (!success) {
     throw new HTTPException(404, { message: 'Option not found' });
   }
@@ -126,10 +134,11 @@ groupRoutes.patch('/options/:option_id', zValidator('param', optionIdParamSchema
 });
 
 groupRoutes.delete('/options/:option_id', zValidator('param', optionIdParamSchema), async (c) => {
+  const userId = c.get('userId');
   const { option_id: optionId } = c.req.valid('param');
   const db = createDb(c.env.DB);
 
-  const success = await deleteGroupOption(db, optionId);
+  const success = await deleteGroupOption(db, userId, optionId);
   if (!success) {
     throw new HTTPException(404, { message: 'Option not found' });
   }

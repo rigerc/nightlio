@@ -1,6 +1,6 @@
-import { asc, eq, and } from 'drizzle-orm';
+import { asc, eq, and, isNull, inArray } from 'drizzle-orm';
 import { toBatch, type Database } from '../db/client';
-import { groupOptions, groups } from '../db/schema';
+import { entrySelections, entrySliderValues, groupOptions, groups, moodEntries } from '../db/schema';
 import type { GroupCreateInput, GroupUpdateInput, OptionUpdateInput } from '@shared/schemas/groups';
 
 export class ValidationError extends Error {}
@@ -46,8 +46,73 @@ function validateSliderFields(fields: SliderFields): void {
   }
 }
 
-export async function getAllGroups(db: Database): Promise<GroupRecord[]> {
-  const groupRows = await db.select().from(groups).orderBy(asc(groups.sortOrder), asc(groups.name));
+async function cloneDefaultGroupsForUser(db: Database, userId: number): Promise<void> {
+  const templates = await db.select().from(groups).where(isNull(groups.userId)).orderBy(asc(groups.sortOrder), asc(groups.id));
+
+  for (const template of templates) {
+    const [inserted] = await db
+      .insert(groups)
+      .values({
+        userId,
+        name: template.name,
+        color: template.color,
+        icon: template.icon,
+        sortOrder: template.sortOrder,
+        type: template.type,
+        sliderMin: template.sliderMin,
+        sliderMax: template.sliderMax,
+        sliderLabels: template.sliderLabels,
+      })
+      .returning({ id: groups.id });
+
+    const options = await db.select().from(groupOptions).where(eq(groupOptions.groupId, template.id)).orderBy(asc(groupOptions.sortOrder), asc(groupOptions.id));
+    if (options.length > 0) {
+      await db.insert(groupOptions).values(options.map((option) => ({
+        groupId: inserted.id,
+        name: option.name,
+        icon: option.icon,
+        sortOrder: option.sortOrder,
+      })));
+    }
+  }
+}
+
+async function userHasGlobalGroupReferences(db: Database, userId: number): Promise<boolean> {
+  const [selectionRef] = await db
+    .select({ id: entrySelections.id })
+    .from(entrySelections)
+    .innerJoin(moodEntries, eq(entrySelections.entryId, moodEntries.id))
+    .innerJoin(groupOptions, eq(entrySelections.optionId, groupOptions.id))
+    .innerJoin(groups, eq(groupOptions.groupId, groups.id))
+    .where(and(eq(moodEntries.userId, userId), isNull(groups.userId)))
+    .limit(1);
+  if (selectionRef) return true;
+
+  const [sliderRef] = await db
+    .select({ id: entrySliderValues.id })
+    .from(entrySliderValues)
+    .innerJoin(moodEntries, eq(entrySliderValues.entryId, moodEntries.id))
+    .innerJoin(groups, eq(entrySliderValues.groupId, groups.id))
+    .where(and(eq(moodEntries.userId, userId), isNull(groups.userId)))
+    .limit(1);
+  return Boolean(sliderRef);
+}
+
+export async function ensureUserGroups(db: Database, userId: number): Promise<void> {
+  const existing = await db.query.groups.findFirst({ where: eq(groups.userId, userId), columns: { id: true } });
+  if (existing) return;
+
+  if (await userHasGlobalGroupReferences(db, userId)) {
+    await db.update(groups).set({ userId }).where(isNull(groups.userId));
+    return;
+  }
+
+  await cloneDefaultGroupsForUser(db, userId);
+}
+
+export async function getAllGroups(db: Database, userId: number): Promise<GroupRecord[]> {
+  await ensureUserGroups(db, userId);
+  const groupRows = await db.select().from(groups).where(eq(groups.userId, userId)).orderBy(asc(groups.sortOrder), asc(groups.name));
 
   const result: GroupRecord[] = [];
   for (const group of groupRows) {
@@ -78,7 +143,7 @@ export async function getAllGroups(db: Database): Promise<GroupRecord[]> {
   return result;
 }
 
-export async function createGroup(db: Database, input: GroupCreateInput): Promise<number> {
+export async function createGroup(db: Database, userId: number, input: GroupCreateInput): Promise<number> {
   if (!input.name.trim()) {
     throw new ValidationError('Group name cannot be empty');
   }
@@ -93,6 +158,7 @@ export async function createGroup(db: Database, input: GroupCreateInput): Promis
     const [inserted] = await db
       .insert(groups)
       .values({
+        userId,
         name: input.name.trim(),
         type: 'slider',
         sliderMin,
@@ -105,15 +171,18 @@ export async function createGroup(db: Database, input: GroupCreateInput): Promis
 
   const [inserted] = await db
     .insert(groups)
-    .values({ name: input.name.trim(), type: 'category' })
+    .values({ userId, name: input.name.trim(), type: 'category' })
     .returning({ id: groups.id });
   return inserted.id;
 }
 
-export async function createGroupOption(db: Database, groupId: number, name: string): Promise<number> {
+export async function createGroupOption(db: Database, userId: number, groupId: number, name: string): Promise<number> {
   if (!name.trim()) {
     throw new ValidationError('Option name cannot be empty');
   }
+  const group = await db.query.groups.findFirst({ where: and(eq(groups.id, groupId), eq(groups.userId, userId)), columns: { id: true } });
+  if (!group) throw new ValidationError('Group not found');
+
   const [inserted] = await db
     .insert(groupOptions)
     .values({ groupId, name: name.trim() })
@@ -121,7 +190,7 @@ export async function createGroupOption(db: Database, groupId: number, name: str
   return inserted.id;
 }
 
-export async function updateGroup(db: Database, groupId: number, fields: GroupUpdateInput): Promise<boolean> {
+export async function updateGroup(db: Database, userId: number, groupId: number, fields: GroupUpdateInput): Promise<boolean> {
   const updates: Record<string, unknown> = {};
 
   if (fields.name !== undefined) {
@@ -144,11 +213,11 @@ export async function updateGroup(db: Database, groupId: number, fields: GroupUp
     return false;
   }
 
-  const result = await db.update(groups).set(updates).where(eq(groups.id, groupId)).returning({ id: groups.id });
+  const result = await db.update(groups).set(updates).where(and(eq(groups.id, groupId), eq(groups.userId, userId))).returning({ id: groups.id });
   return result.length > 0;
 }
 
-export async function updateGroupOption(db: Database, optionId: number, fields: OptionUpdateInput): Promise<boolean> {
+export async function updateGroupOption(db: Database, userId: number, optionId: number, fields: OptionUpdateInput): Promise<boolean> {
   const updates: Record<string, unknown> = {};
 
   if (fields.name !== undefined) {
@@ -164,20 +233,36 @@ export async function updateGroupOption(db: Database, optionId: number, fields: 
     return false;
   }
 
+  const allowed = await db
+    .select({ id: groupOptions.id })
+    .from(groupOptions)
+    .innerJoin(groups, eq(groupOptions.groupId, groups.id))
+    .where(and(eq(groupOptions.id, optionId), eq(groups.userId, userId)));
+  if (allowed.length === 0) return false;
+
   const result = await db.update(groupOptions).set(updates).where(eq(groupOptions.id, optionId)).returning({ id: groupOptions.id });
   return result.length > 0;
 }
 
-export async function reorderGroups(db: Database, orderedIds: number[]): Promise<void> {
+export async function reorderGroups(db: Database, userId: number, orderedIds: number[]): Promise<void> {
   if (orderedIds.length === 0) return;
+  const allowed = await db.select({ id: groups.id }).from(groups).where(and(eq(groups.userId, userId), inArray(groups.id, orderedIds)));
+  if (allowed.length !== new Set(orderedIds).size) throw new ValidationError('One or more groups were not found');
+
   const statements = orderedIds.map((groupId, index) =>
-    db.update(groups).set({ sortOrder: index }).where(eq(groups.id, groupId))
+    db.update(groups).set({ sortOrder: index }).where(and(eq(groups.id, groupId), eq(groups.userId, userId)))
   );
   await db.batch(toBatch(statements));
 }
 
-export async function reorderGroupOptions(db: Database, groupId: number, orderedIds: number[]): Promise<void> {
+export async function reorderGroupOptions(db: Database, userId: number, groupId: number, orderedIds: number[]): Promise<void> {
   if (orderedIds.length === 0) return;
+  const group = await db.query.groups.findFirst({ where: and(eq(groups.id, groupId), eq(groups.userId, userId)), columns: { id: true } });
+  if (!group) throw new ValidationError('Group not found');
+
+  const allowed = await db.select({ id: groupOptions.id }).from(groupOptions).where(and(eq(groupOptions.groupId, groupId), inArray(groupOptions.id, orderedIds)));
+  if (allowed.length !== new Set(orderedIds).size) throw new ValidationError('One or more options were not found');
+
   const statements = orderedIds.map((optionId, index) =>
     db
       .update(groupOptions)
@@ -187,12 +272,19 @@ export async function reorderGroupOptions(db: Database, groupId: number, ordered
   await db.batch(toBatch(statements));
 }
 
-export async function deleteGroup(db: Database, groupId: number): Promise<boolean> {
-  const result = await db.delete(groups).where(eq(groups.id, groupId)).returning({ id: groups.id });
+export async function deleteGroup(db: Database, userId: number, groupId: number): Promise<boolean> {
+  const result = await db.delete(groups).where(and(eq(groups.id, groupId), eq(groups.userId, userId))).returning({ id: groups.id });
   return result.length > 0;
 }
 
-export async function deleteGroupOption(db: Database, optionId: number): Promise<boolean> {
+export async function deleteGroupOption(db: Database, userId: number, optionId: number): Promise<boolean> {
+  const allowed = await db
+    .select({ id: groupOptions.id })
+    .from(groupOptions)
+    .innerJoin(groups, eq(groupOptions.groupId, groups.id))
+    .where(and(eq(groupOptions.id, optionId), eq(groups.userId, userId)));
+  if (allowed.length === 0) return false;
+
   const result = await db.delete(groupOptions).where(eq(groupOptions.id, optionId)).returning({ id: groupOptions.id });
   return result.length > 0;
 }

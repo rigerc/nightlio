@@ -14,6 +14,7 @@ const DEFAULT_CONFIG: AppConfig = {
   enable_mood_music: false,
   enable_google_health: false,
   local_login_requires_access_key: false,
+  clerk_enabled: false,
 };
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);

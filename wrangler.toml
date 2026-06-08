@@ -21,6 +21,9 @@ DEFAULT_SELF_HOST_ID = "selfhost_default_user"
 CORS_ORIGINS = "http://localhost:5173"
 ENABLE_GOOGLE_OAUTH = "0"
 ENABLE_GOOGLE_HEALTH = "0"
+# Clerk multi-user auth is enabled when CLERK_JWT_KEY is configured as a secret.
+# Also set VITE_CLERK_PUBLISHABLE_KEY for frontend builds and, in production,
+# CLERK_AUTHORIZED_PARTIES to your trusted origins (comma-separated).
 
 [env.staging]
 [[env.staging.d1_databases]]

@@ -1,3 +1,4 @@
+import { verifyToken as verifyClerkToken } from '@clerk/backend';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { HTTPException } from 'hono/http-exception';
@@ -9,6 +10,7 @@ import { jwtExpiresInSeconds } from '../lib/env';
 import { googleAuthRequestSchema } from '@shared/schemas/auth';
 import {
   ensureLocalUser,
+  getOrCreateClerkUser,
   getOrCreateUser,
   getUserById,
   type UserRecord,
@@ -68,6 +70,15 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+function authorizedParties(raw: string | undefined): string[] | undefined {
+  const values = raw?.split(',').map((value) => value.trim()).filter(Boolean) ?? [];
+  return values.length > 0 ? values : undefined;
+}
+
+function stringClaim(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
 authRoutes.post('/auth/google', zValidator('json', googleAuthRequestSchema), async (c) => {
   const { token } = c.req.valid('json');
   const clientId = c.env.GOOGLE_CLIENT_ID;
@@ -99,8 +110,32 @@ authRoutes.post('/auth/verify', async (c) => {
   const token = header.slice('Bearer '.length).trim();
 
   try {
-    const payload = await verifyToken(token, c.env.JWT_SECRET);
     const db = createDb(c.env.DB);
+
+    if (c.env.CLERK_JWT_KEY) {
+      try {
+        const clerkPayload = await verifyClerkToken(token, {
+          jwtKey: c.env.CLERK_JWT_KEY,
+          authorizedParties: authorizedParties(c.env.CLERK_AUTHORIZED_PARTIES),
+        });
+        const clerkUserId = stringClaim(clerkPayload.sub);
+        if (clerkUserId) {
+          const user = await getOrCreateClerkUser(
+            db,
+            clerkUserId,
+            stringClaim(clerkPayload.email) ?? stringClaim(clerkPayload.email_address),
+            stringClaim(clerkPayload.name) ?? stringClaim(clerkPayload.full_name) ?? stringClaim(clerkPayload.first_name),
+            stringClaim(clerkPayload.picture) ?? stringClaim(clerkPayload.image_url)
+          );
+          if (!user) throw new HTTPException(500, { message: 'Authentication failed' });
+          return c.json({ user: toUserOut(user) });
+        }
+      } catch {
+        // Fall back to legacy JWT below during staged migrations.
+      }
+    }
+
+    const payload = await verifyToken(token, c.env.JWT_SECRET);
     const user = await getUserById(db, Number(payload.user_id));
     if (!user) {
       throw new HTTPException(404, { message: 'User not found' });

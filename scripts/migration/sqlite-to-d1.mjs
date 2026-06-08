@@ -75,11 +75,16 @@ function formatValue(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-function tableToInserts(db, table) {
+function tableToInserts(db, table, options = {}) {
   const rows = db.prepare(`SELECT * FROM ${quoteIdent(table)}`).all();
   if (rows.length === 0) return { count: 0, sql: '' };
 
-  const columns = Object.keys(rows[0]);
+  let columns = Object.keys(rows[0]);
+  if (table === 'groups' && !columns.includes('user_id') && options.defaultGroupUserId != null) {
+    columns = [...columns, 'user_id'];
+    for (const row of rows) row.user_id = options.defaultGroupUserId;
+  }
+
   const columnList = columns.map(quoteIdent).join(', ');
   const statements = rows.map((row) => {
     const values = columns.map((col) => formatValue(row[col])).join(', ');
@@ -110,6 +115,11 @@ async function main() {
   try {
     const chunks = [];
     const counts = {};
+    const sourceUsers = db.prepare("SELECT id FROM users ORDER BY id").all();
+    const defaultGroupUserId = sourceUsers.length === 1 ? sourceUsers[0].id : null;
+    if (sourceUsers.length > 1) {
+      console.warn('Multiple users found; groups will be imported as templates. Run a per-user group backfill before production cutover.');
+    }
 
     for (const table of TABLES) {
       const exists = db
@@ -120,7 +130,7 @@ async function main() {
         continue;
       }
 
-      const { count, sql } = tableToInserts(db, table);
+      const { count, sql } = tableToInserts(db, table, { defaultGroupUserId });
       counts[table] = count;
 
       if (table === 'groups' && count > 0) {

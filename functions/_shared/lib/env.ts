@@ -14,6 +14,8 @@ export interface Bindings {
   SELFHOST_USER_NAME?: string;
   SELFHOST_USER_EMAIL?: string;
   SELFHOST_ACCESS_KEY?: string;
+  CLERK_JWT_KEY?: string;
+  CLERK_AUTHORIZED_PARTIES?: string;
 }
 
 export interface Variables {

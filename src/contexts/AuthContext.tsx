@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/clerk-react';
 import apiService from '../services/api';
 import { fitnessApi } from '../services/fitnessApi';
 import { useConfig } from './ConfigContext';
@@ -20,6 +21,63 @@ export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
+};
+
+export const ClerkAuthProvider = ({ children }: { children: ReactNode }) => {
+  const { isLoaded, isSignedIn, getToken, signOut } = useClerkAuth();
+  const { user: clerkUser } = useClerkUser();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const logout = useCallback(() => {
+    apiService.setAuthToken('');
+    setUser(null);
+    void signOut();
+  }, [signOut]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      apiService.setAuthToken('');
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    void (async () => {
+      setLoading(true);
+      try {
+        const token = await getToken();
+        if (!token) throw new Error('Missing Clerk session token');
+        apiService.setAuthToken(token);
+        const verified = await apiService.verifyToken(token);
+        if (isMounted) setUser(verified.user);
+      } catch (error) {
+        console.error('Clerk session verification failed:', error);
+        apiService.setAuthToken('');
+        if (isMounted) setUser(null);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+
+    return () => { isMounted = false; };
+  }, [isLoaded, isSignedIn, getToken, clerkUser?.id]);
+
+  const login = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    return { success: false, error: 'Use Clerk sign-in to log in.' };
+  }, []);
+
+  const localLogin = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    return { success: false, error: 'Local login is disabled while Clerk is active.' };
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, localLogin, logout, isAuthenticated: !!user }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {

@@ -15,6 +15,20 @@
       "when": 1780963200000,
       "tag": "0001_seed_default_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780963200001,
+      "tag": "0002_clerk_user_scoped_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1780963200002,
+      "tag": "0003_rebuild_groups_user_scope",
+      "breakpoints": true
     }
   ]
 }

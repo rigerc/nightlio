@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
+import { SignIn, SignUp } from '@clerk/clerk-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfig } from '../../contexts/ConfigContext';
 import './LoginPage.css';
@@ -37,7 +38,7 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const LoginPage = () => {
+const LoginPage = ({ clerkEnabled = false, signUp = false }: { clerkEnabled?: boolean; signUp?: boolean }) => {
   const navigate = useNavigate();
   const { login, localLogin, isAuthenticated } = useAuth();
   const { config } = useConfig();
@@ -208,6 +209,21 @@ const LoginPage = () => {
   }, [localLogin, navigate, selfHostAccessKey]);
 
   const isSelfHost = !config.enable_google_oauth;
+
+  if (clerkEnabled) {
+    return (
+      <div className="login-page">
+        <div className="login-page__card" style={{ maxWidth: '480px', padding: '2rem' }}>
+          <h1 className="login-page__brand-title" style={{ marginBottom: '1.25rem' }}>Waymark</h1>
+          {signUp ? (
+            <SignUp routing="path" path="/sign-up" signInUrl="/login" fallbackRedirectUrl="/dashboard" />
+          ) : (
+            <SignIn routing="path" path="/login" signUpUrl="/sign-up" fallbackRedirectUrl="/dashboard" />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">

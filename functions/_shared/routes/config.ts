@@ -17,6 +17,7 @@ configRoutes.get('/config', (c) => {
     enable_mood_music: isTruthy(c.env.ENABLE_MOOD_MUSIC),
     enable_google_health: isTruthy(c.env.ENABLE_GOOGLE_HEALTH),
     local_login_requires_access_key: localLoginRequiresAccessKey,
+    clerk_enabled: Boolean(c.env.CLERK_JWT_KEY),
     google_client_id: c.env.GOOGLE_CLIENT_ID ?? null,
     google_health_client_id: c.env.GOOGLE_HEALTH_CLIENT_ID ?? null,
   });

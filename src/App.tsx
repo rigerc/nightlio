@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import LoginPage from "./components/auth/LoginPage";
 import NotFound from "./views/NotFound";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, ClerkAuthProvider } from "./contexts/AuthContext";
 import { ConfigProvider } from "./contexts/ConfigContext";
 import { BurnerProvider } from "./contexts/BurnerContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -211,16 +211,19 @@ const AppContent = () => {
   );
 };
 
-function App() {
+function App({ clerkEnabled = false }: { clerkEnabled?: boolean }) {
+  const SelectedAuthProvider = clerkEnabled ? ClerkAuthProvider : AuthProvider;
+
   return (
     <ConfigProvider>
       <ToastProvider>
         <BurnerProvider>
-          <AuthProvider>
+          <SelectedAuthProvider>
             <Routes>
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/about" element={<AboutPage />} />
-              <Route path="/login" element={<LoginPage />} />
+              <Route path="/login" element={<LoginPage clerkEnabled={clerkEnabled} />} />
+              <Route path="/sign-up" element={<LoginPage clerkEnabled={clerkEnabled} signUp />} />
               <Route
                 path="/dashboard/*"
                 element={
@@ -231,7 +234,7 @@ function App() {
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </AuthProvider>
+          </SelectedAuthProvider>
         </BurnerProvider>
       </ToastProvider>
     </ConfigProvider>

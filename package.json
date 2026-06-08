@@ -41,6 +41,8 @@
     "db:migrate-data": "node scripts/migration/sqlite-to-d1.mjs"
   },
   "dependencies": {
+    "@clerk/backend": "^3.5.0",
+    "@clerk/clerk-react": "^5.61.8",
     "@hono/zod-validator": "^0.8.0",
     "@hookform/resolvers": "^5.4.0",
     "@mdxeditor/editor": "^3.11.6",

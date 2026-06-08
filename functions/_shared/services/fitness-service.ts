@@ -5,6 +5,7 @@ import {
   fitnessConnections,
   fitnessData,
   groupOptions,
+  groups,
   moodEntries,
 } from '../db/schema';
 import { decryptToken, encryptToken } from '../lib/crypto';
@@ -547,11 +548,12 @@ async function applyFitnessToEntries(db: Database, userId: number, points: Fitne
       // Tag names aren't scoped to a group, so if two groups ever share an
       // option name, order by id to keep the match deterministic rather than
       // arbitrary (whatever D1 happens to return first).
-      const option = await db.query.groupOptions.findFirst({
-        where: sql`LOWER(${groupOptions.name}) = LOWER(${tagName})`,
-        columns: { id: true },
-        orderBy: asc(groupOptions.id),
-      });
+      const [option] = await db
+        .select({ id: groupOptions.id })
+        .from(groupOptions)
+        .innerJoin(groups, eq(groupOptions.groupId, groups.id))
+        .where(and(eq(groups.userId, userId), sql`LOWER(${groupOptions.name}) = LOWER(${tagName})`))
+        .orderBy(asc(groupOptions.id));
       if (!option) continue;
 
       const existing = await db.query.entrySelections.findFirst({

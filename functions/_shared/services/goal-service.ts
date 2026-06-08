@@ -5,7 +5,6 @@ import type { GoalCreateInput, GoalUpdateInput } from '@shared/schemas/goals';
 
 export class ValidationError extends Error {}
 
-type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 type GoalRow = typeof goals.$inferSelect;
 
 export interface GoalRecord {
@@ -52,7 +51,7 @@ function toGoalRecord(row: GoalRow): Omit<GoalRecord, 'already_completed_today'>
   };
 }
 
-async function rolloverGoalIfNeeded(tx: Transaction, goalRow: GoalRow): Promise<GoalRecord> {
+async function rolloverGoalIfNeeded(db: Database, goalRow: GoalRow): Promise<GoalRecord> {
   const todayStart = weekStartIso();
   const todayStr = formatDate(new Date());
 
@@ -65,12 +64,12 @@ async function rolloverGoalIfNeeded(tx: Transaction, goalRow: GoalRow): Promise<
   let streak = goalRow.streak ?? 0;
   streak = freq > 0 && currentCompleted >= freq ? streak + 1 : 0;
 
-  await tx
+  await db
     .update(goals)
     .set({ completed: 0, streak, periodStart: todayStart, updatedAt: sql`CURRENT_TIMESTAMP` })
     .where(and(eq(goals.id, goalRow.id), eq(goals.userId, goalRow.userId)));
 
-  const refreshed = await tx.query.goals.findFirst({
+  const refreshed = await db.query.goals.findFirst({
     where: and(eq(goals.id, goalRow.id), eq(goals.userId, goalRow.userId)),
   });
 
@@ -109,13 +108,13 @@ export async function getGoals(db: Database, userId: number): Promise<GoalRecord
     orderBy: [desc(goals.createdAt)],
   });
 
-  return db.transaction(async (tx) => Promise.all(rows.map((row) => rolloverGoalIfNeeded(tx, row))));
+  return Promise.all(rows.map((row) => rolloverGoalIfNeeded(db, row)));
 }
 
 export async function getGoalById(db: Database, userId: number, goalId: number): Promise<GoalRecord | null> {
   const row = await db.query.goals.findFirst({ where: and(eq(goals.id, goalId), eq(goals.userId, userId)) });
   if (!row) return null;
-  return db.transaction(async (tx) => rolloverGoalIfNeeded(tx, row));
+  return rolloverGoalIfNeeded(db, row);
 }
 
 export async function updateGoal(db: Database, userId: number, goalId: number, input: GoalUpdateInput): Promise<boolean> {
@@ -161,47 +160,49 @@ export async function deleteGoal(db: Database, userId: number, goalId: number): 
 export async function incrementGoalProgress(db: Database, userId: number, goalId: number): Promise<GoalRecord | null> {
   const todayStr = formatDate(new Date());
 
-  return db.transaction(async (tx) => {
-    const row = await tx.query.goals.findFirst({ where: and(eq(goals.id, goalId), eq(goals.userId, userId)) });
-    if (!row) return null;
+  // Sequential read-modify-write (each step depends on the previous step's result) —
+  // D1 has no cross-statement transaction primitive reachable from Drizzle that
+  // allows intermediate reads (see toBatch), so these run as separate
+  // auto-committed statements.
+  const row = await db.query.goals.findFirst({ where: and(eq(goals.id, goalId), eq(goals.userId, userId)) });
+  if (!row) return null;
 
-    const goal = await rolloverGoalIfNeeded(tx, row);
-    let currentCompleted = goal.completed;
-    const freq = goal.frequency_per_week;
-    const streak = goal.streak;
-    const periodStart = goal.period_start;
-    let lastCompletedDate = goal.last_completed_date;
+  const goal = await rolloverGoalIfNeeded(db, row);
+  let currentCompleted = goal.completed;
+  const freq = goal.frequency_per_week;
+  const streak = goal.streak;
+  const periodStart = goal.period_start;
+  let lastCompletedDate = goal.last_completed_date;
 
-    if (lastCompletedDate !== todayStr && currentCompleted < freq) {
-      currentCompleted += 1;
-      lastCompletedDate = todayStr;
-    } else if (lastCompletedDate !== todayStr) {
-      lastCompletedDate = todayStr;
-    }
+  if (lastCompletedDate !== todayStr && currentCompleted < freq) {
+    currentCompleted += 1;
+    lastCompletedDate = todayStr;
+  } else if (lastCompletedDate !== todayStr) {
+    lastCompletedDate = todayStr;
+  }
 
-    await tx
-      .update(goals)
-      .set({
-        completed: currentCompleted,
-        streak,
-        periodStart,
-        lastCompletedDate: lastCompletedDate ?? goal.last_completed_date,
-        updatedAt: sql`CURRENT_TIMESTAMP`,
-      })
-      .where(and(eq(goals.id, goalId), eq(goals.userId, userId)));
+  await db
+    .update(goals)
+    .set({
+      completed: currentCompleted,
+      streak,
+      periodStart,
+      lastCompletedDate: lastCompletedDate ?? goal.last_completed_date,
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+    })
+    .where(and(eq(goals.id, goalId), eq(goals.userId, userId)));
 
-    if (lastCompletedDate === todayStr) {
-      await tx
-        .insert(goalCompletions)
-        .values({ userId, goalId, date: todayStr })
-        .onConflictDoNothing();
-    }
+  if (lastCompletedDate === todayStr) {
+    await db
+      .insert(goalCompletions)
+      .values({ userId, goalId, date: todayStr })
+      .onConflictDoNothing();
+  }
 
-    const updated = await tx.query.goals.findFirst({ where: and(eq(goals.id, goalId), eq(goals.userId, userId)) });
-    if (!updated) return null;
+  const updated = await db.query.goals.findFirst({ where: and(eq(goals.id, goalId), eq(goals.userId, userId)) });
+  if (!updated) return null;
 
-    return { ...toGoalRecord(updated), already_completed_today: updated.lastCompletedDate === todayStr };
-  });
+  return { ...toGoalRecord(updated), already_completed_today: updated.lastCompletedDate === todayStr };
 }
 
 export async function getGoalCompletions(

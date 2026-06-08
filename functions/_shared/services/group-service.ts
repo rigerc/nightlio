@@ -1,5 +1,5 @@
 import { asc, eq, and } from 'drizzle-orm';
-import type { Database } from '../db/client';
+import { toBatch, type Database } from '../db/client';
 import { groupOptions, groups } from '../db/schema';
 import type { GroupCreateInput, GroupUpdateInput, OptionUpdateInput } from '@shared/schemas/groups';
 
@@ -169,22 +169,22 @@ export async function updateGroupOption(db: Database, optionId: number, fields: 
 }
 
 export async function reorderGroups(db: Database, orderedIds: number[]): Promise<void> {
-  await db.transaction(async (tx) => {
-    for (const [index, groupId] of orderedIds.entries()) {
-      await tx.update(groups).set({ sortOrder: index }).where(eq(groups.id, groupId));
-    }
-  });
+  if (orderedIds.length === 0) return;
+  const statements = orderedIds.map((groupId, index) =>
+    db.update(groups).set({ sortOrder: index }).where(eq(groups.id, groupId))
+  );
+  await db.batch(toBatch(statements));
 }
 
 export async function reorderGroupOptions(db: Database, groupId: number, orderedIds: number[]): Promise<void> {
-  await db.transaction(async (tx) => {
-    for (const [index, optionId] of orderedIds.entries()) {
-      await tx
-        .update(groupOptions)
-        .set({ sortOrder: index })
-        .where(and(eq(groupOptions.id, optionId), eq(groupOptions.groupId, groupId)));
-    }
-  });
+  if (orderedIds.length === 0) return;
+  const statements = orderedIds.map((optionId, index) =>
+    db
+      .update(groupOptions)
+      .set({ sortOrder: index })
+      .where(and(eq(groupOptions.id, optionId), eq(groupOptions.groupId, groupId)))
+  );
+  await db.batch(toBatch(statements));
 }
 
 export async function deleteGroup(db: Database, groupId: number): Promise<boolean> {

@@ -7,7 +7,7 @@ import tsParser from '@typescript-eslint/parser'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'node_modules', 'api/venv/**', '**/site-packages/**']),
+  globalIgnores(['dist', 'node_modules', '.wrangler', 'api/venv/**', '**/site-packages/**']),
   {
     files: ['**/*.{ts,tsx}'],
     plugins: {

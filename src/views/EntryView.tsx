@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import type { ComponentType } from 'react';
 import type { LucideProps } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   AlertCircle,
   ArrowLeft,
@@ -41,6 +44,20 @@ const inputValueToDisplayDate = (isoDate: string): string => {
 const AUTOSAVE_DEBOUNCE_MS = 1200;
 
 type SaveState = 'idle' | 'saving' | 'dirty' | 'error' | 'saved' | 'disabled';
+
+// Client-side representation of the editable entry fields, fed into React Hook Form.
+// Validation here is intentionally loose (typing/coercion only) — the authoritative
+// rules (mood range, non-empty content, important_reason requirements) live in the
+// shared moodCreateSchema/moodUpdateSchema enforced by the API.
+const entryFormSchema = z.object({
+  selectedOptions: z.array(z.number()),
+  sliderValues: z.record(z.coerce.number(), z.number()),
+  content: z.string(),
+  isImportant: z.boolean(),
+  importantReason: z.string(),
+});
+
+type EntryFormValues = z.infer<typeof entryFormSchema>;
 
 interface SavePayload {
   mood: number | null;
@@ -103,6 +120,22 @@ const buildSnapshot = ({
     important_reason: importantReason,
   });
 
+const buildDefaultFormValues = (entry: Entry | null): EntryFormValues => ({
+  selectedOptions: entry?.selections?.map((s) => s.id) ?? [],
+  sliderValues: Object.fromEntries((entry?.slider_values ?? []).map((sv) => [sv.group_id, sv.value])),
+  content: entry?.content || DEFAULT_MARKDOWN,
+  isImportant: entry?.is_important ?? false,
+  importantReason: entry?.important_reason ?? '',
+});
+
+const EMPTY_FORM_VALUES: EntryFormValues = {
+  selectedOptions: [],
+  sliderValues: {},
+  content: DEFAULT_MARKDOWN,
+  isImportant: false,
+  importantReason: '',
+};
+
 const EntryView = ({
   selectedMood,
   groups,
@@ -114,14 +147,13 @@ const EntryView = ({
   onEditMoodSelect,
 }: EntryViewProps) => {
   const isEditing = Boolean(editingEntry);
-  const initialSelectionIds = editingEntry?.selections?.map((s) => s.id) ?? [];
-  const initialSliderValues: Record<number, number> = Object.fromEntries(
-    (editingEntry?.slider_values ?? []).map((sv) => [sv.group_id, sv.value])
-  );
 
-  const [selectedOptions, setSelectedOptions] = useState<number[]>(initialSelectionIds);
-  const [sliderValues, setSliderValues] = useState<Record<number, number>>(initialSliderValues);
-  const [markdownContent, setMarkdownContent] = useState(editingEntry?.content || DEFAULT_MARKDOWN);
+  const { watch, setValue, reset, getValues } = useForm<EntryFormValues>({
+    resolver: zodResolver(entryFormSchema),
+    defaultValues: buildDefaultFormValues(editingEntry),
+  });
+  const { selectedOptions, sliderValues, content: markdownContent, isImportant, importantReason } = watch();
+
   const [activeEntryId, setActiveEntryId] = useState<number | null>(editingEntry?.id ?? null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -129,8 +161,6 @@ const EntryView = ({
   const [entryDateInput, setEntryDateInput] = useState<string>(() =>
     editingEntry ? dateToInputValue(editingEntry.date) : ''
   );
-  const [isImportant, setIsImportant] = useState<boolean>(editingEntry?.is_important ?? false);
-  const [importantReason, setImportantReason] = useState<string>(editingEntry?.important_reason ?? '');
 
   const markdownRef = useRef<MarkdownAreaRef | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -157,39 +187,34 @@ const EntryView = ({
     activeEntryIdRef.current = activeEntryId;
   }, [activeEntryId]);
 
+  const hydrateEditor = (markdown: string) => {
+    isHydratingEditorRef.current = true;
+    const instance = markdownRef.current?.getInstance?.();
+    if (instance && typeof instance.setMarkdown === 'function') {
+      instance.setMarkdown(markdown);
+    }
+    queueMicrotask(() => { isHydratingEditorRef.current = false; });
+  };
+
   useEffect(() => {
     if (isEditing && editingEntry) {
       createdByAutosaveRef.current = false;
       skipAutosaveFlushRef.current = false;
 
-      const selectionIds = editingEntry.selections?.map((s) => s.id) ?? [];
-      const sliderVals: Record<number, number> = Object.fromEntries(
-        (editingEntry.slider_values ?? []).map((sv) => [sv.group_id, sv.value])
-      );
-      const content = editingEntry.content || '';
-
-      setSelectedOptions(selectionIds);
-      setSliderValues(sliderVals);
+      const formValues = buildDefaultFormValues(editingEntry);
+      reset(formValues);
       setActiveEntryId(editingEntry.id);
-      setMarkdownContent(content);
       setEntryDateInput(dateToInputValue(editingEntry.date));
-      setIsImportant(editingEntry.is_important ?? false);
-      setImportantReason(editingEntry.important_reason ?? '');
 
-      isHydratingEditorRef.current = true;
-      const instance = markdownRef.current?.getInstance?.();
-      if (instance && typeof instance.setMarkdown === 'function') {
-        instance.setMarkdown(content);
-      }
-      queueMicrotask(() => { isHydratingEditorRef.current = false; });
+      hydrateEditor(formValues.content);
 
       lastSavedSnapshotRef.current = buildSnapshot({
         mood: selectedMood ?? editingEntry.mood,
-        content,
-        selectedOptions: selectionIds,
-        sliderValues: sliderVals,
-        isImportant: editingEntry.is_important ?? false,
-        importantReason: editingEntry.important_reason ?? '',
+        content: formValues.content,
+        selectedOptions: formValues.selectedOptions,
+        sliderValues: formValues.sliderValues,
+        isImportant: formValues.isImportant,
+        importantReason: formValues.importantReason,
       });
       setLastSavedAt(new Date());
       setSaveState(isBurnerMode ? 'disabled' : 'saved');
@@ -197,21 +222,12 @@ const EntryView = ({
       return;
     }
 
-    setSelectedOptions([]);
-    setSliderValues({});
+    reset(EMPTY_FORM_VALUES);
     setActiveEntryId(null);
-    setMarkdownContent(DEFAULT_MARKDOWN);
-    setIsImportant(false);
-    setImportantReason('');
     createdByAutosaveRef.current = false;
     skipAutosaveFlushRef.current = false;
 
-    isHydratingEditorRef.current = true;
-    const instance = markdownRef.current?.getInstance?.();
-    if (instance && typeof instance.setMarkdown === 'function') {
-      instance.setMarkdown(DEFAULT_MARKDOWN);
-    }
-    queueMicrotask(() => { isHydratingEditorRef.current = false; });
+    hydrateEditor(DEFAULT_MARKDOWN);
 
     lastSavedSnapshotRef.current = buildSnapshot({
       mood: selectedMood,
@@ -444,21 +460,21 @@ const EntryView = ({
   }, [selectedMood, selectedOptions, sliderValues, markdownContent, isImportant, importantReason, isBurnerMode, executeAutosave, clearAutosaveTimer]);
 
   const handleOptionToggle = (optionId: number) => {
-    setSelectedOptions((prev) =>
-      prev.includes(optionId) ? prev.filter((id) => id !== optionId) : [...prev, optionId]
-    );
+    const current = getValues('selectedOptions');
+    const next = current.includes(optionId) ? current.filter((id) => id !== optionId) : [...current, optionId];
+    setValue('selectedOptions', next, { shouldDirty: true });
   };
 
   const handleSliderChange = (groupId: number, value: number | undefined) => {
-    setSliderValues((prev) => {
-      if (value === undefined) {
-        if (!(groupId in prev)) return prev;
-        const next = { ...prev };
-        delete next[groupId];
-        return next;
-      }
-      return { ...prev, [groupId]: value };
-    });
+    const current = getValues('sliderValues');
+    if (value === undefined) {
+      if (!(groupId in current)) return;
+      const next = { ...current };
+      delete next[groupId];
+      setValue('sliderValues', next, { shouldDirty: true });
+      return;
+    }
+    setValue('sliderValues', { ...current, [groupId]: value }, { shouldDirty: true });
   };
 
   const handleMoodSelection = (moodValue: MoodValue) => {
@@ -471,7 +487,7 @@ const EntryView = ({
 
   const handleEditorChange = (nextMarkdown: string) => {
     if (isHydratingEditorRef.current) return;
-    setMarkdownContent(nextMarkdown || '');
+    setValue('content', nextMarkdown || '', { shouldDirty: true });
   };
 
   const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -489,15 +505,8 @@ const EntryView = ({
   };
 
   const resetDraftComposer = () => {
-    isHydratingEditorRef.current = true;
-    markdownRef.current?.getInstance?.()?.setMarkdown(DEFAULT_MARKDOWN);
-    queueMicrotask(() => { isHydratingEditorRef.current = false; });
-
-    setMarkdownContent(DEFAULT_MARKDOWN);
-    setSelectedOptions([]);
-    setSliderValues({});
-    setIsImportant(false);
-    setImportantReason('');
+    hydrateEditor(DEFAULT_MARKDOWN);
+    reset(EMPTY_FORM_VALUES);
     setSaveErrorMessage('');
     setSaveState('disabled');
 
@@ -615,7 +624,7 @@ const EntryView = ({
               <input
                 type="checkbox"
                 checked={isImportant}
-                onChange={(e) => setIsImportant(e.target.checked)}
+                onChange={(e) => setValue('isImportant', e.target.checked, { shouldDirty: true })}
                 style={{ cursor: 'pointer' }}
               />
               <Star
@@ -632,7 +641,7 @@ const EntryView = ({
               <input
                 type="text"
                 value={importantReason}
-                onChange={(e) => setImportantReason(e.target.value)}
+                onChange={(e) => setValue('importantReason', e.target.value, { shouldDirty: true })}
                 placeholder="Why is this day important? (e.g. Birthday, Anniversary…)"
                 style={{
                   border: '1px solid var(--important-border)',

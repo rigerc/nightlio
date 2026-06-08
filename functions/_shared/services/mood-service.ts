@@ -1,5 +1,6 @@
 import { and, asc, between, desc, eq, sql } from 'drizzle-orm';
-import type { Database } from '../db/client';
+import type { BatchItem } from 'drizzle-orm/batch';
+import { toBatch, type Database } from '../db/client';
 import {
   entryMoodLogs,
   entrySelections,
@@ -18,8 +19,6 @@ import {
 } from './achievement-service';
 
 export class ValidationError extends Error {}
-
-type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 export interface MoodEntryRecord {
   id: number;
@@ -132,47 +131,58 @@ export async function createMoodEntry(db: Database, userId: number, input: MoodC
   const selectedOptions = input.selected_options ?? [];
   const sliderValues = input.slider_values ?? {};
 
-  const entryId = await db.transaction(async (tx) => {
-    const [inserted] = await tx
-      .insert(moodEntries)
-      .values({
-        userId,
-        date: input.date,
-        mood: input.mood,
-        content: input.content,
-        ...(input.time ? { createdAt: input.time } : {}),
-        isImportant,
-        importantReason: input.important_reason ?? null,
-      })
-      .returning({ id: moodEntries.id });
+  const [inserted] = await db
+    .insert(moodEntries)
+    .values({
+      userId,
+      date: input.date,
+      mood: input.mood,
+      content: input.content,
+      ...(input.time ? { createdAt: input.time } : {}),
+      isImportant,
+      importantReason: input.important_reason ?? null,
+    })
+    .returning({ id: moodEntries.id });
 
-    const newEntryId = inserted.id;
+  const entryId = inserted.id;
 
-    if (selectedOptions.length > 0) {
-      await tx.insert(entrySelections).values(
-        selectedOptions.map((optionId) => ({ entryId: newEntryId, optionId }))
-      );
-    }
+  // D1 has no cross-statement transactions reachable from Drizzle (see toBatch);
+  // the dependent rows reference `entryId`, so they're inserted in one atomic
+  // batch after the parent row exists, with a best-effort cleanup on failure.
+  const dependentInserts: BatchItem<'sqlite'>[] = [];
+  if (selectedOptions.length > 0) {
+    dependentInserts.push(
+      db.insert(entrySelections).values(selectedOptions.map((optionId) => ({ entryId, optionId })))
+    );
+  }
 
-    const sliderEntries = Object.entries(sliderValues);
-    if (sliderEntries.length > 0) {
-      await tx.insert(entrySliderValues).values(
+  const sliderEntries = Object.entries(sliderValues);
+  if (sliderEntries.length > 0) {
+    dependentInserts.push(
+      db.insert(entrySliderValues).values(
         sliderEntries.map(([groupId, value]) => ({
-          entryId: newEntryId,
+          entryId,
           groupId: Number(groupId),
           value,
         }))
-      );
-    }
+      )
+    );
+  }
 
-    await tx.insert(entryMoodLogs).values({
-      entryId: newEntryId,
+  dependentInserts.push(
+    db.insert(entryMoodLogs).values({
+      entryId,
       mood: input.mood,
       ...(input.time ? { loggedAt: input.time } : {}),
-    });
+    })
+  );
 
-    return newEntryId;
-  });
+  try {
+    await db.batch(toBatch(dependentInserts));
+  } catch (err) {
+    await db.delete(moodEntries).where(eq(moodEntries.id, entryId));
+    throw err;
+  }
 
   const newAchievements = await checkAchievements(db, userId);
 
@@ -223,44 +233,50 @@ export async function updateEntry(db: Database, userId: number, entryId: number,
     return null;
   }
 
-  await db.transaction(async (tx) => {
-    const updates: Record<string, unknown> = {};
-    if (input.mood !== undefined) updates.mood = input.mood;
-    if (input.content !== undefined) updates.content = input.content;
-    if (input.date !== undefined) updates.date = input.date;
-    if (input.time !== undefined) updates.createdAt = input.time;
-    if (input.is_important !== undefined) updates.isImportant = input.is_important;
-    if (input.important_reason !== undefined) updates.importantReason = input.important_reason;
+  const updates: Record<string, unknown> = {};
+  if (input.mood !== undefined) updates.mood = input.mood;
+  if (input.content !== undefined) updates.content = input.content;
+  if (input.date !== undefined) updates.date = input.date;
+  if (input.time !== undefined) updates.createdAt = input.time;
+  if (input.is_important !== undefined) updates.isImportant = input.is_important;
+  if (input.important_reason !== undefined) updates.importantReason = input.important_reason;
+  updates.updatedAt = sql`CURRENT_TIMESTAMP`;
 
-    updates.updatedAt = sql`CURRENT_TIMESTAMP`;
-    await tx
+  const statements: BatchItem<'sqlite'>[] = [
+    db
       .update(moodEntries)
       .set(updates)
-      .where(and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId)));
+      .where(and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId))),
+  ];
 
-    if (input.selected_options !== undefined) {
-      await tx.delete(entrySelections).where(eq(entrySelections.entryId, entryId));
-      if (input.selected_options.length > 0) {
-        await tx.insert(entrySelections).values(
+  if (input.selected_options !== undefined) {
+    statements.push(db.delete(entrySelections).where(eq(entrySelections.entryId, entryId)));
+    if (input.selected_options.length > 0) {
+      statements.push(
+        db.insert(entrySelections).values(
           input.selected_options.map((optionId) => ({ entryId, optionId }))
-        );
-      }
+        )
+      );
     }
+  }
 
-    if (input.slider_values !== undefined) {
-      await tx.delete(entrySliderValues).where(eq(entrySliderValues.entryId, entryId));
-      const sliderEntries = Object.entries(input.slider_values);
-      if (sliderEntries.length > 0) {
-        await tx.insert(entrySliderValues).values(
+  if (input.slider_values !== undefined) {
+    statements.push(db.delete(entrySliderValues).where(eq(entrySliderValues.entryId, entryId)));
+    const sliderEntries = Object.entries(input.slider_values);
+    if (sliderEntries.length > 0) {
+      statements.push(
+        db.insert(entrySliderValues).values(
           sliderEntries.map(([groupId, value]) => ({
             entryId,
             groupId: Number(groupId),
             value,
           }))
-        );
-      }
+        )
+      );
     }
-  });
+  }
+
+  await db.batch(toBatch(statements));
 
   const entry = await getEntryById(db, userId, entryId);
   if (!entry) return null;
@@ -279,15 +295,15 @@ export async function deleteEntry(db: Database, userId: number, entryId: number)
   return result.length > 0;
 }
 
-async function recalculateAverageMood(tx: Transaction, entryId: number): Promise<void> {
-  const [row] = await tx
+async function recalculateAverageMood(db: Database, entryId: number): Promise<void> {
+  const [row] = await db
     .select({ avgMood: sql<number | null>`ROUND(AVG(${entryMoodLogs.mood}))` })
     .from(entryMoodLogs)
     .where(eq(entryMoodLogs.entryId, entryId));
 
   if (!row || row.avgMood == null) return;
 
-  await tx
+  await db
     .update(moodEntries)
     .set({ mood: Math.trunc(row.avgMood), updatedAt: sql`CURRENT_TIMESTAMP` })
     .where(eq(moodEntries.id, entryId));
@@ -302,26 +318,28 @@ export async function addMoodLog(db: Database, userId: number, entryId: number, 
     throw new ValidationError('Entry not found');
   }
 
-  return db.transaction(async (tx) => {
-    const [inserted] = await tx
-      .insert(entryMoodLogs)
-      .values({ entryId, mood })
-      .returning({ id: entryMoodLogs.id, mood: entryMoodLogs.mood, loggedAt: entryMoodLogs.loggedAt });
+  // Sequential read-then-write (recalc depends on the row just inserted, and the
+  // response depends on the row recalc just updated) — D1 has no cross-statement
+  // transaction primitive reachable from Drizzle that allows intermediate reads
+  // (see toBatch), so these run as separate auto-committed statements.
+  const [inserted] = await db
+    .insert(entryMoodLogs)
+    .values({ entryId, mood })
+    .returning({ id: entryMoodLogs.id, mood: entryMoodLogs.mood, loggedAt: entryMoodLogs.loggedAt });
 
-    await recalculateAverageMood(tx, entryId);
+  await recalculateAverageMood(db, entryId);
 
-    const [updatedEntry] = await tx
-      .select({ mood: moodEntries.mood })
-      .from(moodEntries)
-      .where(eq(moodEntries.id, entryId));
+  const [updatedEntry] = await db
+    .select({ mood: moodEntries.mood })
+    .from(moodEntries)
+    .where(eq(moodEntries.id, entryId));
 
-    return {
-      log_id: inserted.id,
-      mood: inserted.mood,
-      logged_at: inserted.loggedAt,
-      updated_entry_mood: updatedEntry?.mood ?? mood,
-    };
-  });
+  return {
+    log_id: inserted.id,
+    mood: inserted.mood,
+    logged_at: inserted.loggedAt,
+    updated_entry_mood: updatedEntry?.mood ?? mood,
+  };
 }
 
 export async function getMoodLogs(db: Database, userId: number, entryId: number): Promise<MoodLogRecord[]> {
@@ -361,25 +379,23 @@ export async function deleteMoodLog(
     return null;
   }
 
-  return db.transaction(async (tx) => {
-    const deleted = await tx
-      .delete(entryMoodLogs)
-      .where(and(eq(entryMoodLogs.id, logId), eq(entryMoodLogs.entryId, entryId)))
-      .returning({ id: entryMoodLogs.id });
+  const deleted = await db
+    .delete(entryMoodLogs)
+    .where(and(eq(entryMoodLogs.id, logId), eq(entryMoodLogs.entryId, entryId)))
+    .returning({ id: entryMoodLogs.id });
 
-    if (deleted.length === 0) {
-      return null;
-    }
+  if (deleted.length === 0) {
+    return null;
+  }
 
-    await recalculateAverageMood(tx, entryId);
+  await recalculateAverageMood(db, entryId);
 
-    const [updatedEntry] = await tx
-      .select({ mood: moodEntries.mood })
-      .from(moodEntries)
-      .where(eq(moodEntries.id, entryId));
+  const [updatedEntry] = await db
+    .select({ mood: moodEntries.mood })
+    .from(moodEntries)
+    .where(eq(moodEntries.id, entryId));
 
-    return updatedEntry?.mood ?? null;
-  });
+  return updatedEntry?.mood ?? null;
 }
 
 export async function getStatistics(db: Database, userId: number) {

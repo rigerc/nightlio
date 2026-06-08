@@ -14,6 +14,10 @@ dist-ssr
 .env
 docker-compose.override.yml
 
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

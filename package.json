@@ -26,7 +26,7 @@
     "d1"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "NODE_OPTIONS='--max-old-space-size=768' vite build",
     "preview": "vite preview",
     "lint": "eslint .",

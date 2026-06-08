@@ -97,6 +97,6 @@ fitnessRoutes.get('/fitness/data', zValidator('query', dataQuerySchema), async (
   const userId = c.get('userId');
   const { provider, start_date: startDate, end_date: endDate } = c.req.valid('query');
   const db = createDb(c.env.DB);
-  const data = await getData(db, userId, startDate, endDate);
+  const data = await getData(db, userId, provider, startDate, endDate);
   return c.json({ data, provider });
 });

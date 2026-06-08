@@ -56,11 +56,11 @@ const AppContent = () => {
         item.id === entry.id ? { ...item, ...entry } as Entry : item
       );
     });
-  }, []);
+  }, [setPastEntries]);
 
   const handleEntryDeleted = useCallback((deletedEntryId: number) => {
     setPastEntries((prev) => prev.filter((entry) => entry.id !== deletedEntryId));
-  }, []);
+  }, [setPastEntries]);
 
   const handleStartEdit = (entry: Entry) => {
     navigate('entry', { state: { entry, mood: entry.mood } });

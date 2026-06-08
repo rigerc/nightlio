@@ -13,6 +13,7 @@ export interface Bindings {
   FITNESS_TOKEN_KEY?: string;
   SELFHOST_USER_NAME?: string;
   SELFHOST_USER_EMAIL?: string;
+  SELFHOST_ACCESS_KEY?: string;
 }
 
 export interface Variables {

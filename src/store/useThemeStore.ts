@@ -9,6 +9,14 @@ interface ThemeState {
   cycle: () => void;
 }
 
+function readLegacyThemePreference(key: string, fallback: string): string {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function applyToDocument(theme: string, colorScheme: string) {
   document.documentElement.setAttribute('data-theme', theme);
   document.documentElement.setAttribute('data-color', colorScheme);
@@ -17,8 +25,8 @@ function applyToDocument(theme: string, colorScheme: string) {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
-      theme: 'dark',
-      colorScheme: 'default',
+      theme: readLegacyThemePreference('waymark:theme', 'dark'),
+      colorScheme: readLegacyThemePreference('waymark:color-scheme', 'default'),
       setTheme: (theme) => set({ theme }),
       setColorScheme: (colorScheme) => set({ colorScheme }),
       cycle: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' }),

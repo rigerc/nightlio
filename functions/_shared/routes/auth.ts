@@ -49,6 +49,25 @@ function toUserOut(user: UserRecord) {
   };
 }
 
+function isLocalRequest(url: string): boolean {
+  const { hostname } = new URL(url);
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
+function constantTimeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const aBytes = encoder.encode(a);
+  const bBytes = encoder.encode(b);
+  const maxLength = Math.max(aBytes.length, bBytes.length);
+  let diff = aBytes.length ^ bBytes.length;
+
+  for (let i = 0; i < maxLength; i += 1) {
+    diff |= (aBytes[i] ?? 0) ^ (bBytes[i] ?? 0);
+  }
+
+  return diff === 0;
+}
+
 authRoutes.post('/auth/google', zValidator('json', googleAuthRequestSchema), async (c) => {
   const { token } = c.req.valid('json');
   const clientId = c.env.GOOGLE_CLIENT_ID;
@@ -100,6 +119,19 @@ authRoutes.post('/auth/verify', async (c) => {
 });
 
 authRoutes.post('/auth/local/login', async (c) => {
+  if (!isLocalRequest(c.req.url)) {
+    const expectedAccessKey = c.env.SELFHOST_ACCESS_KEY;
+    if (!expectedAccessKey) {
+      throw new HTTPException(403, { message: 'Self-host local login requires SELFHOST_ACCESS_KEY outside localhost' });
+    }
+
+    const body = await c.req.json().catch(() => ({})) as { access_key?: unknown };
+    const providedAccessKey = typeof body.access_key === 'string' ? body.access_key : '';
+    if (!constantTimeEqual(providedAccessKey, expectedAccessKey)) {
+      throw new HTTPException(401, { message: 'Invalid self-host access key' });
+    }
+  }
+
   const defaultSelfHostId = c.env.DEFAULT_SELF_HOST_ID ?? 'self-host-user';
   const defaultName = c.env.SELFHOST_USER_NAME || 'Me';
   const defaultEmail = c.env.SELFHOST_USER_EMAIL || `${defaultSelfHostId}@localhost`;

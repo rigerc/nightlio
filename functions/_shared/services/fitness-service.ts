@@ -159,10 +159,11 @@ export async function disconnect(db: Database, userId: number, provider: string)
 export async function getData(
   db: Database,
   userId: number,
+  provider: string,
   startDate?: string | null,
   endDate?: string | null
 ): Promise<FitnessDataPoint[]> {
-  const conditions = [eq(fitnessData.userId, userId)];
+  const conditions = [eq(fitnessData.userId, userId), eq(fitnessData.sourceProvider, provider)];
   if (startDate) conditions.push(gte(fitnessData.date, startDate));
   if (endDate) conditions.push(lte(fitnessData.date, endDate));
 

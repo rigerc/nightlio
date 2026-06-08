@@ -26,8 +26,6 @@ import { useBurner } from '../contexts/BurnerContext';
 import type { MoodValue, Entry, Group, Selection, SliderValue } from '../types';
 
 const DEFAULT_MARKDOWN = '';
-const DEFAULT_MARKDOWN_TRIMMED = DEFAULT_MARKDOWN.trim();
-
 const dateToInputValue = (displayDate: string): string => {
   const d = new Date(displayDate);
   if (isNaN(d.getTime())) return '';
@@ -229,14 +227,7 @@ const EntryView = ({
 
     hydrateEditor(DEFAULT_MARKDOWN);
 
-    lastSavedSnapshotRef.current = buildSnapshot({
-      mood: selectedMood,
-      content: DEFAULT_MARKDOWN,
-      selectedOptions: [],
-      sliderValues: {},
-      isImportant: false,
-      importantReason: '',
-    });
+    lastSavedSnapshotRef.current = '';
     setLastSavedAt(null);
     setSaveState(isBurnerMode ? 'disabled' : 'idle');
     setSaveErrorMessage('');
@@ -429,14 +420,6 @@ const EntryView = ({
 
     if (!payload.mood) {
       setSaveState('idle');
-      return;
-    }
-
-    const trimmed = payload.content.trim();
-    const hasMeaningfulContent = Boolean(trimmed) && trimmed !== DEFAULT_MARKDOWN_TRIMMED;
-
-    if (!hasMeaningfulContent) {
-      setSaveState(activeEntryIdRef.current ? 'saved' : 'idle');
       return;
     }
 

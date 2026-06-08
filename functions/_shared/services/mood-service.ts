@@ -122,9 +122,6 @@ export async function getEntrySliderValues(db: Database, entryId: number): Promi
 }
 
 export async function createMoodEntry(db: Database, userId: number, input: MoodCreateInput) {
-  if (!input.content.trim()) {
-    throw new ValidationError('Content cannot be empty');
-  }
   assertImportantReason(input.is_important, input.important_reason);
 
   const isImportant = Boolean(input.is_important);
@@ -220,9 +217,6 @@ export async function getEntryById(db: Database, userId: number, entryId: number
 }
 
 export async function updateEntry(db: Database, userId: number, entryId: number, input: MoodUpdateInput) {
-  if (input.content !== undefined && !input.content.trim()) {
-    throw new ValidationError('Content cannot be empty');
-  }
   assertImportantReason(input.is_important, input.important_reason);
 
   const existing = await db.query.moodEntries.findFirst({
@@ -295,18 +289,21 @@ export async function deleteEntry(db: Database, userId: number, entryId: number)
   return result.length > 0;
 }
 
-async function recalculateAverageMood(db: Database, entryId: number): Promise<void> {
+async function recalculateAverageMood(db: Database, entryId: number): Promise<number | null> {
   const [row] = await db
     .select({ avgMood: sql<number | null>`ROUND(AVG(${entryMoodLogs.mood}))` })
     .from(entryMoodLogs)
     .where(eq(entryMoodLogs.entryId, entryId));
 
-  if (!row || row.avgMood == null) return;
+  if (!row || row.avgMood == null) return null;
 
+  const mood = Math.trunc(row.avgMood);
   await db
     .update(moodEntries)
-    .set({ mood: Math.trunc(row.avgMood), updatedAt: sql`CURRENT_TIMESTAMP` })
+    .set({ mood, updatedAt: sql`CURRENT_TIMESTAMP` })
     .where(eq(moodEntries.id, entryId));
+
+  return mood;
 }
 
 export async function addMoodLog(db: Database, userId: number, entryId: number, mood: number) {
@@ -388,7 +385,8 @@ export async function deleteMoodLog(
     return null;
   }
 
-  await recalculateAverageMood(db, entryId);
+  const recalculatedMood = await recalculateAverageMood(db, entryId);
+  if (recalculatedMood !== null) return recalculatedMood;
 
   const [updatedEntry] = await db
     .select({ mood: moodEntries.mood })

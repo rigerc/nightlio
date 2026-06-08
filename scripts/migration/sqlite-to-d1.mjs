@@ -17,8 +17,13 @@
  *   wrangler d1 execute waymark-db --remote --file=<output.sql>   # production
  *
  * Run `wrangler d1 migrations apply DB --local/--remote` FIRST so the target
- * tables exist, and make sure the destination is empty (a fresh D1 database) —
- * this script does not delete or upsert existing rows.
+ * tables exist. That migration also seeds default `groups`/`group_options`
+ * rows — since the source instance has its own (and `mood_entries` reference
+ * them by id), this script clears those defaults right before replaying the
+ * source's `groups` data (see GROUP_CLEANUP_TABLES below) so the original ids
+ * survive the round trip without PRIMARY KEY conflicts or duplicates. Aside
+ * from that, the destination should be empty — this script does not delete or
+ * upsert any other existing rows.
  */
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
@@ -46,6 +51,17 @@ const TABLES = [
 
 function quoteIdent(name) {
   return `\`${name.replace(/`/g, '``')}\``;
+}
+
+// `groups`/`group_options` are global tables pre-populated by
+// drizzle/0001_seed_default_groups.sql. Clear them (child-to-parent, FK-safe)
+// right before replaying the source's own rows so original ids transfer
+// cleanly — `entry_selections`/`entry_slider_values` reference them and would
+// otherwise either collide on id or end up duplicated alongside the seed data.
+const GROUP_CLEANUP_TABLES = ['entry_selections', 'entry_slider_values', 'group_options', 'groups'];
+
+function groupCleanupSql() {
+  return GROUP_CLEANUP_TABLES.map((table) => `DELETE FROM ${quoteIdent(table)};`).join('\n');
 }
 
 function formatValue(value) {
@@ -106,6 +122,11 @@ async function main() {
 
       const { count, sql } = tableToInserts(db, table);
       counts[table] = count;
+
+      if (table === 'groups' && count > 0) {
+        chunks.push(`-- Clear seed-migration defaults before replaying source groups\n${groupCleanupSql()}`);
+      }
+
       if (count > 0) {
         chunks.push(`-- ${table} (${count} rows)\n${sql}`);
       }

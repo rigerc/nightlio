@@ -29,6 +29,12 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+// Matches SQLite's `CURRENT_TIMESTAMP` ('YYYY-MM-DD HH:MM:SS', UTC) so
+// in-memory reconstructions stay consistent with rows read back from D1.
+function sqliteTimestamp(date: Date = new Date()): string {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function weekStartIso(date: Date = new Date()): string {
   const weekday = (date.getDay() + 6) % 7; // Monday = 0 ... Sunday = 6
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate() - weekday);
@@ -63,18 +69,17 @@ async function rolloverGoalIfNeeded(db: Database, goalRow: GoalRow): Promise<Goa
   const freq = goalRow.frequencyPerWeek ?? 0;
   let streak = goalRow.streak ?? 0;
   streak = freq > 0 && currentCompleted >= freq ? streak + 1 : 0;
+  const updatedAt = sqliteTimestamp();
 
   await db
     .update(goals)
     .set({ completed: 0, streak, periodStart: todayStart, updatedAt: sql`CURRENT_TIMESTAMP` })
     .where(and(eq(goals.id, goalRow.id), eq(goals.userId, goalRow.userId)));
 
-  const refreshed = await db.query.goals.findFirst({
-    where: and(eq(goals.id, goalRow.id), eq(goals.userId, goalRow.userId)),
-  });
-
-  const out = refreshed ?? goalRow;
-  return { ...toGoalRecord(out), already_completed_today: out.lastCompletedDate === todayStr };
+  // Construct the rolled-over record in-memory — we just wrote these exact
+  // values, so a re-SELECT would be a redundant round-trip per goal.
+  const rolledOver: GoalRow = { ...goalRow, completed: 0, streak, periodStart: todayStart, updatedAt };
+  return { ...toGoalRecord(rolledOver), already_completed_today: rolledOver.lastCompletedDate === todayStr };
 }
 
 export async function createGoal(db: Database, userId: number, input: GoalCreateInput): Promise<number> {

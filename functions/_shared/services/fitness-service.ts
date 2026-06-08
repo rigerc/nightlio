@@ -543,9 +543,13 @@ async function applyFitnessToEntries(db: Database, userId: number, points: Fitne
     }
 
     for (const tagName of tagsToAdd) {
+      // Tag names aren't scoped to a group, so if two groups ever share an
+      // option name, order by id to keep the match deterministic rather than
+      // arbitrary (whatever D1 happens to return first).
       const option = await db.query.groupOptions.findFirst({
         where: sql`LOWER(${groupOptions.name}) = LOWER(${tagName})`,
         columns: { id: true },
+        orderBy: asc(groupOptions.id),
       });
       if (!option) continue;
 
@@ -574,6 +578,10 @@ export async function sync(
     throw new FitnessError(`No fitness connection for user ${userId} provider ${provider}`);
   }
 
+  // Skip (returning 0, same as the original FastAPI throttle in
+  // api/services/fitness_service.py::sync) if synced within the last hour —
+  // intentional, to avoid hammering the Google Health API on every page load,
+  // even for an explicit user-triggered sync.
   if (row.lastSyncedAt) {
     try {
       const last = new Date(row.lastSyncedAt);

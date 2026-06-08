@@ -12,6 +12,12 @@ migrations_dir = "drizzle"
 [vars]
 JWT_EXPIRES_IN_SECONDS = "3600"
 DEFAULT_SELF_HOST_ID = "selfhost_default_user"
+# Dev-only default (Vite serves the frontend from :5173 while `wrangler pages
+# dev` serves the API on a different port). Pages Functions are served
+# same-origin in production, so CORS isn't exercised there — but if you do
+# front this with a separate origin (custom domain split, preview URLs,
+# Cloudflare Access, etc.), override this with that origin via `wrangler
+# secret put` / the dashboard rather than relying on this default.
 CORS_ORIGINS = "http://localhost:5173"
 ENABLE_GOOGLE_OAUTH = "0"
 ENABLE_GOOGLE_HEALTH = "0"

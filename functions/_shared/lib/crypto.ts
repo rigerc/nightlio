@@ -3,8 +3,15 @@
 // equivalent). Existing fitness connections must be re-authenticated after
 // migration since ciphertexts are not cross-compatible.
 
+// Domain-separation label: even when FITNESS_TOKEN_KEY isn't set and callers
+// fall back to JWT_SECRET (see fitness-service.ts::tokenSecret), hashing it
+// together with a fixed, purpose-specific label keeps the derived AES-GCM key
+// distinct from the raw secret used for JWT signing — operators should still
+// set a dedicated FITNESS_TOKEN_KEY in production.
+const KEY_DERIVATION_LABEL = 'waymark:fitness-token-encryption:v1';
+
 async function deriveKey(secret: string): Promise<CryptoKey> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${KEY_DERIVATION_LABEL}:${secret}`));
   return crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 

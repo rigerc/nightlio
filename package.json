@@ -21,8 +21,9 @@
     "privacy",
     "react",
     "typescript",
-    "fastapi",
-    "docker"
+    "cloudflare",
+    "hono",
+    "d1"
   ],
   "scripts": {
     "dev": "vite",
@@ -32,13 +33,12 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit && tsc --noEmit -p functions/tsconfig.json",
     "test": "npm run typecheck && npm run lint",
-    "test:api": "PYTHONPATH=. api/venv/bin/pytest",
-    "api:install": "python3 -m venv api/venv && api/venv/bin/pip install -r api/requirements.txt",
-    "api": "PYTHONPATH=. api/venv/bin/uvicorn api.main:app --reload --reload-dir api --port 5000",
-    "docker:build": "docker compose build",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "pages:dev": "npm run build && wrangler pages dev dist --compatibility-date=2025-01-01 --compatibility-flags=nodejs_compat",
+    "pages:deploy": "npm run build && wrangler pages deploy dist",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:migrate-data": "node scripts/migration/sqlite-to-d1.mjs"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.8.0",
@@ -75,6 +75,7 @@
     "@typescript-eslint/eslint-plugin": "^8.60.1",
     "@typescript-eslint/parser": "^8.60.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "better-sqlite3": "^12.10.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",

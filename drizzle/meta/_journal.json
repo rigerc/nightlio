@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1780877424106,
+      "tag": "0000_lumpy_black_crow",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1780963200000,
+      "tag": "0001_seed_default_groups",
+      "breakpoints": true
+    }
+  ]
+}

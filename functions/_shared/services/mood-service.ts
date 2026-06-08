@@ -1,0 +1,406 @@
+import { and, asc, between, desc, eq, sql } from 'drizzle-orm';
+import type { Database } from '../db/client';
+import {
+  entryMoodLogs,
+  entrySelections,
+  entrySliderValues,
+  groupOptions,
+  groups,
+  moodEntries,
+} from '../db/schema';
+import type { MoodCreateInput, MoodUpdateInput } from '@shared/schemas/mood';
+import {
+  checkAchievements,
+  getCurrentStreak,
+  getMoodCounts,
+  getMoodStatistics,
+  incrementStatsView,
+} from './achievement-service';
+
+export class ValidationError extends Error {}
+
+type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+
+export interface MoodEntryRecord {
+  id: number;
+  date: string;
+  mood: number;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  is_important: boolean;
+  important_reason: string | null;
+}
+
+export interface EntrySelectionRecord {
+  id: number;
+  group_id: number;
+  name: string;
+  icon: string | null;
+  group_name: string;
+  group_color: string | null;
+}
+
+export interface EntrySliderValueRecord {
+  id: number;
+  group_id: number;
+  value: number;
+  group_name: string;
+  group_color: string | null;
+  group_icon: string | null;
+  slider_min: number | null;
+  slider_max: number | null;
+  slider_labels: string[] | null;
+}
+
+export interface MoodLogRecord {
+  id: number;
+  entry_id: number;
+  mood: number;
+  logged_at: string;
+}
+
+function toEntryRecord(row: typeof moodEntries.$inferSelect): MoodEntryRecord {
+  return {
+    id: row.id,
+    date: row.date,
+    mood: row.mood,
+    content: row.content,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+    is_important: row.isImportant,
+    important_reason: row.importantReason,
+  };
+}
+
+function assertImportantReason(isImportant: boolean | undefined, importantReason: string | undefined | null): void {
+  if (isImportant && !(importantReason ?? '').trim()) {
+    throw new ValidationError('Please provide a reason for marking this day important');
+  }
+}
+
+export async function getEntrySelections(db: Database, entryId: number): Promise<EntrySelectionRecord[]> {
+  const rows = await db
+    .select({
+      id: groupOptions.id,
+      group_id: groupOptions.groupId,
+      name: groupOptions.name,
+      icon: groupOptions.icon,
+      group_name: groups.name,
+      group_color: groups.color,
+      group_sort_order: groups.sortOrder,
+      option_sort_order: groupOptions.sortOrder,
+    })
+    .from(entrySelections)
+    .innerJoin(groupOptions, eq(entrySelections.optionId, groupOptions.id))
+    .innerJoin(groups, eq(groupOptions.groupId, groups.id))
+    .where(eq(entrySelections.entryId, entryId))
+    .orderBy(asc(groups.sortOrder), asc(groups.name), asc(groupOptions.sortOrder), asc(groupOptions.name));
+
+  return rows.map(({ group_sort_order, option_sort_order, ...rest }) => rest);
+}
+
+export async function getEntrySliderValues(db: Database, entryId: number): Promise<EntrySliderValueRecord[]> {
+  const rows = await db
+    .select({
+      id: entrySliderValues.id,
+      group_id: entrySliderValues.groupId,
+      value: entrySliderValues.value,
+      group_name: groups.name,
+      group_color: groups.color,
+      group_icon: groups.icon,
+      slider_min: groups.sliderMin,
+      slider_max: groups.sliderMax,
+      slider_labels: groups.sliderLabels,
+      group_sort_order: groups.sortOrder,
+    })
+    .from(entrySliderValues)
+    .innerJoin(groups, eq(entrySliderValues.groupId, groups.id))
+    .where(eq(entrySliderValues.entryId, entryId))
+    .orderBy(asc(groups.sortOrder), asc(groups.name));
+
+  return rows.map(({ group_sort_order, ...rest }) => rest);
+}
+
+export async function createMoodEntry(db: Database, userId: number, input: MoodCreateInput) {
+  if (!input.content.trim()) {
+    throw new ValidationError('Content cannot be empty');
+  }
+  assertImportantReason(input.is_important, input.important_reason);
+
+  const isImportant = Boolean(input.is_important);
+  const selectedOptions = input.selected_options ?? [];
+  const sliderValues = input.slider_values ?? {};
+
+  const entryId = await db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(moodEntries)
+      .values({
+        userId,
+        date: input.date,
+        mood: input.mood,
+        content: input.content,
+        ...(input.time ? { createdAt: input.time } : {}),
+        isImportant,
+        importantReason: input.important_reason ?? null,
+      })
+      .returning({ id: moodEntries.id });
+
+    const newEntryId = inserted.id;
+
+    if (selectedOptions.length > 0) {
+      await tx.insert(entrySelections).values(
+        selectedOptions.map((optionId) => ({ entryId: newEntryId, optionId }))
+      );
+    }
+
+    const sliderEntries = Object.entries(sliderValues);
+    if (sliderEntries.length > 0) {
+      await tx.insert(entrySliderValues).values(
+        sliderEntries.map(([groupId, value]) => ({
+          entryId: newEntryId,
+          groupId: Number(groupId),
+          value,
+        }))
+      );
+    }
+
+    await tx.insert(entryMoodLogs).values({
+      entryId: newEntryId,
+      mood: input.mood,
+      ...(input.time ? { loggedAt: input.time } : {}),
+    });
+
+    return newEntryId;
+  });
+
+  const newAchievements = await checkAchievements(db, userId);
+
+  return { entry_id: entryId, new_achievements: newAchievements };
+}
+
+export async function getAllEntries(db: Database, userId: number): Promise<MoodEntryRecord[]> {
+  const rows = await db
+    .select()
+    .from(moodEntries)
+    .where(eq(moodEntries.userId, userId))
+    .orderBy(desc(moodEntries.createdAt), desc(moodEntries.date));
+  return rows.map(toEntryRecord);
+}
+
+export async function getEntriesByDateRange(
+  db: Database,
+  userId: number,
+  startDate: string,
+  endDate: string
+): Promise<MoodEntryRecord[]> {
+  const rows = await db
+    .select()
+    .from(moodEntries)
+    .where(and(eq(moodEntries.userId, userId), between(moodEntries.date, startDate, endDate)))
+    .orderBy(desc(moodEntries.createdAt), desc(moodEntries.date));
+  return rows.map(toEntryRecord);
+}
+
+export async function getEntryById(db: Database, userId: number, entryId: number): Promise<MoodEntryRecord | null> {
+  const row = await db.query.moodEntries.findFirst({
+    where: and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId)),
+  });
+  return row ? toEntryRecord(row) : null;
+}
+
+export async function updateEntry(db: Database, userId: number, entryId: number, input: MoodUpdateInput) {
+  if (input.content !== undefined && !input.content.trim()) {
+    throw new ValidationError('Content cannot be empty');
+  }
+  assertImportantReason(input.is_important, input.important_reason);
+
+  const existing = await db.query.moodEntries.findFirst({
+    where: and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId)),
+    columns: { id: true },
+  });
+  if (!existing) {
+    return null;
+  }
+
+  await db.transaction(async (tx) => {
+    const updates: Record<string, unknown> = {};
+    if (input.mood !== undefined) updates.mood = input.mood;
+    if (input.content !== undefined) updates.content = input.content;
+    if (input.date !== undefined) updates.date = input.date;
+    if (input.time !== undefined) updates.createdAt = input.time;
+    if (input.is_important !== undefined) updates.isImportant = input.is_important;
+    if (input.important_reason !== undefined) updates.importantReason = input.important_reason;
+
+    updates.updatedAt = sql`CURRENT_TIMESTAMP`;
+    await tx
+      .update(moodEntries)
+      .set(updates)
+      .where(and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId)));
+
+    if (input.selected_options !== undefined) {
+      await tx.delete(entrySelections).where(eq(entrySelections.entryId, entryId));
+      if (input.selected_options.length > 0) {
+        await tx.insert(entrySelections).values(
+          input.selected_options.map((optionId) => ({ entryId, optionId }))
+        );
+      }
+    }
+
+    if (input.slider_values !== undefined) {
+      await tx.delete(entrySliderValues).where(eq(entrySliderValues.entryId, entryId));
+      const sliderEntries = Object.entries(input.slider_values);
+      if (sliderEntries.length > 0) {
+        await tx.insert(entrySliderValues).values(
+          sliderEntries.map(([groupId, value]) => ({
+            entryId,
+            groupId: Number(groupId),
+            value,
+          }))
+        );
+      }
+    }
+  });
+
+  const entry = await getEntryById(db, userId, entryId);
+  if (!entry) return null;
+
+  const selections = await getEntrySelections(db, entryId);
+  const sliderValues = await getEntrySliderValues(db, entryId);
+
+  return { ...entry, selections, slider_values: sliderValues };
+}
+
+export async function deleteEntry(db: Database, userId: number, entryId: number): Promise<boolean> {
+  const result = await db
+    .delete(moodEntries)
+    .where(and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId)))
+    .returning({ id: moodEntries.id });
+  return result.length > 0;
+}
+
+async function recalculateAverageMood(tx: Transaction, entryId: number): Promise<void> {
+  const [row] = await tx
+    .select({ avgMood: sql<number | null>`ROUND(AVG(${entryMoodLogs.mood}))` })
+    .from(entryMoodLogs)
+    .where(eq(entryMoodLogs.entryId, entryId));
+
+  if (!row || row.avgMood == null) return;
+
+  await tx
+    .update(moodEntries)
+    .set({ mood: Math.trunc(row.avgMood), updatedAt: sql`CURRENT_TIMESTAMP` })
+    .where(eq(moodEntries.id, entryId));
+}
+
+export async function addMoodLog(db: Database, userId: number, entryId: number, mood: number) {
+  const entry = await db.query.moodEntries.findFirst({
+    where: and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId)),
+    columns: { id: true },
+  });
+  if (!entry) {
+    throw new ValidationError('Entry not found');
+  }
+
+  return db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(entryMoodLogs)
+      .values({ entryId, mood })
+      .returning({ id: entryMoodLogs.id, mood: entryMoodLogs.mood, loggedAt: entryMoodLogs.loggedAt });
+
+    await recalculateAverageMood(tx, entryId);
+
+    const [updatedEntry] = await tx
+      .select({ mood: moodEntries.mood })
+      .from(moodEntries)
+      .where(eq(moodEntries.id, entryId));
+
+    return {
+      log_id: inserted.id,
+      mood: inserted.mood,
+      logged_at: inserted.loggedAt,
+      updated_entry_mood: updatedEntry?.mood ?? mood,
+    };
+  });
+}
+
+export async function getMoodLogs(db: Database, userId: number, entryId: number): Promise<MoodLogRecord[]> {
+  const entry = await db.query.moodEntries.findFirst({
+    where: and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId)),
+    columns: { id: true },
+  });
+  if (!entry) {
+    throw new ValidationError('Entry not found');
+  }
+
+  const rows = await db
+    .select({
+      id: entryMoodLogs.id,
+      entry_id: entryMoodLogs.entryId,
+      mood: entryMoodLogs.mood,
+      logged_at: entryMoodLogs.loggedAt,
+    })
+    .from(entryMoodLogs)
+    .where(eq(entryMoodLogs.entryId, entryId))
+    .orderBy(asc(entryMoodLogs.loggedAt));
+
+  return rows;
+}
+
+export async function deleteMoodLog(
+  db: Database,
+  userId: number,
+  entryId: number,
+  logId: number
+): Promise<number | null> {
+  const entry = await db.query.moodEntries.findFirst({
+    where: and(eq(moodEntries.id, entryId), eq(moodEntries.userId, userId)),
+    columns: { id: true },
+  });
+  if (!entry) {
+    return null;
+  }
+
+  return db.transaction(async (tx) => {
+    const deleted = await tx
+      .delete(entryMoodLogs)
+      .where(and(eq(entryMoodLogs.id, logId), eq(entryMoodLogs.entryId, entryId)))
+      .returning({ id: entryMoodLogs.id });
+
+    if (deleted.length === 0) {
+      return null;
+    }
+
+    await recalculateAverageMood(tx, entryId);
+
+    const [updatedEntry] = await tx
+      .select({ mood: moodEntries.mood })
+      .from(moodEntries)
+      .where(eq(moodEntries.id, entryId));
+
+    return updatedEntry?.mood ?? null;
+  });
+}
+
+export async function getStatistics(db: Database, userId: number) {
+  // Track statistics view for achievements (Data Lover); metrics must not break stats.
+  try {
+    await incrementStatsView(db, userId);
+  } catch {
+    // ignore
+  }
+
+  const [statistics, moodDistribution, currentStreak] = await Promise.all([
+    getMoodStatistics(db, userId),
+    getMoodCounts(db, userId),
+    getCurrentStreak(db, userId),
+  ]);
+
+  return {
+    statistics,
+    mood_distribution: moodDistribution,
+    current_streak: currentStreak,
+  };
+}
+
+export { getCurrentStreak };

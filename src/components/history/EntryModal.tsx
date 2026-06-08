@@ -4,7 +4,7 @@ import { Pencil, Trash2, FileDown, Star } from 'lucide-react';
 import { exportEntryToMarkdown } from '../../utils/exportUtils';
 import { getIconComponent } from '../../utils/iconRegistry';
 import { FITNESS_LABEL, formatFitnessValue } from '../../utils/fitnessUtils';
-import { usePreferences } from '../../contexts/PreferencesContext';
+import { usePreferences } from '../../hooks/usePreferences';
 import SliderValueBar from '../groups/SliderValueBar';
 import type { Entry, Group } from '../../types';
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Star } from 'lucide-react';
 import { getMoodIcon } from '../../utils/moodUtils';
-import { usePreferences } from '../../contexts/PreferencesContext';
+import { usePreferences } from '../../hooks/usePreferences';
 import { getIconComponent } from '../../utils/iconRegistry';
 import apiService from '../../services/api';
 import { useToast } from '../ui/ToastProvider';

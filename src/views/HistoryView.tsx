@@ -1,6 +1,6 @@
 import MoodPicker from '../components/mood/MoodPicker';
 import HistoryList from '../components/history/HistoryList';
-import { usePreferences } from '../contexts/PreferencesContext';
+import { usePreferences } from '../hooks/usePreferences';
 import type { Entry, Group, MoodValue } from '../types';
 
 interface HistoryViewProps {

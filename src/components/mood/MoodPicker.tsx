@@ -1,5 +1,5 @@
 import { MOODS } from '../../utils/moodUtils';
-import { usePreferences } from '../../contexts/PreferencesContext';
+import { usePreferences } from '../../hooks/usePreferences';
 import type { MoodValue } from '../../types';
 import './MoodPicker.css';
 

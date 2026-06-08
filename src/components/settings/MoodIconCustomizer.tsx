@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { MOODS } from '../../utils/moodUtils';
 import { MOOD_ICONS, getIconComponent } from '../../utils/iconRegistry';
-import { usePreferences } from '../../contexts/PreferencesContext';
+import { usePreferences } from '../../hooks/usePreferences';
 import IconPicker from '../ui/IconPicker';
 import { Button } from '../ui/button';
 

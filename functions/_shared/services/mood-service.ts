@@ -97,7 +97,7 @@ export async function getEntrySelections(db: Database, entryId: number): Promise
     .where(eq(entrySelections.entryId, entryId))
     .orderBy(asc(groups.sortOrder), asc(groups.name), asc(groupOptions.sortOrder), asc(groupOptions.name));
 
-  return rows.map(({ group_sort_order, option_sort_order, ...rest }) => rest);
+  return rows.map(({ group_sort_order: _group_sort_order, option_sort_order: _option_sort_order, ...rest }) => rest);
 }
 
 export async function getEntrySliderValues(db: Database, entryId: number): Promise<EntrySliderValueRecord[]> {
@@ -119,7 +119,7 @@ export async function getEntrySliderValues(db: Database, entryId: number): Promi
     .where(eq(entrySliderValues.entryId, entryId))
     .orderBy(asc(groups.sortOrder), asc(groups.name));
 
-  return rows.map(({ group_sort_order, ...rest }) => rest);
+  return rows.map(({ group_sort_order: _group_sort_order, ...rest }) => rest);
 }
 
 export async function createMoodEntry(db: Database, userId: number, input: MoodCreateInput) {

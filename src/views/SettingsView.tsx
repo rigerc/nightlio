@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useConfig } from '../contexts/ConfigContext';
-import { usePreferences } from '../contexts/PreferencesContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { usePreferences } from '../hooks/usePreferences';
+import { useThemeStore } from '../store/useThemeStore';
 import ActivityCustomizer from '../components/groups/ActivityCustomizer';
 import MoodIconCustomizer from '../components/settings/MoodIconCustomizer';
 import FitnessConnectSection from '../components/fitness/FitnessConnectSection';
@@ -45,7 +45,8 @@ const COLOR_SCHEMES: ColorSchemeOption[] = [
 const SettingsView = () => {
   const { config, loading } = useConfig();
   const { use24HourTime, updateUse24HourTime } = usePreferences();
-  const { colorScheme, setColorScheme } = useTheme();
+  const colorScheme = useThemeStore((s) => s.colorScheme);
+  const setColorScheme = useThemeStore((s) => s.setColorScheme);
   const [isSavingTimeFormat, setIsSavingTimeFormat] = useState(false);
   const [timeFormatError, setTimeFormatError] = useState('');
   const fitness = useFitnessData(

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { getMoodIcon, getMoodLabel, MOODS } from '../../utils/moodUtils';
-import { usePreferences } from '../../contexts/PreferencesContext';
+import { usePreferences } from '../../hooks/usePreferences';
 import apiService from '../../services/api';
 import type { MoodLog, MoodValue } from '../../types';
 

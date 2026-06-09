@@ -3,7 +3,7 @@ import { HTTPException } from 'hono/http-exception';
 import { ZodError } from 'zod';
 import type { AppEnv } from '../lib/env';
 
-// Mirrors the {"error": ...} JSON shape returned by api/main.py's exception handlers.
+// Keep API failures in a stable {"error": ...} envelope for frontend callers.
 export const onError: ErrorHandler<AppEnv> = (err, c) => {
   if (err instanceof HTTPException) {
     return c.json({ error: err.message }, err.status);

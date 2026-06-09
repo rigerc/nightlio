@@ -581,9 +581,8 @@ export async function sync(
     throw new FitnessError(`No fitness connection for user ${userId} provider ${provider}`);
   }
 
-  // Skip (returning 0, same as the original FastAPI throttle in
-  // api/services/fitness_service.py::sync) if synced within the last hour —
-  // intentional, to avoid hammering the Google Health API on every page load,
+  // Skip (returning 0) if synced within the last hour — intentional, to avoid
+  // hammering the Google Health API on every page load,
   // even for an explicit user-triggered sync.
   if (row.lastSyncedAt) {
     try {

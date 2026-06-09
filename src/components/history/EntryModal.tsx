@@ -5,6 +5,7 @@ import { exportEntryToMarkdown } from '../../utils/exportUtils';
 import { getIconComponent } from '../../utils/iconRegistry';
 import { FITNESS_LABEL, formatFitnessValue } from '../../utils/fitnessUtils';
 import { usePreferences } from '../../hooks/usePreferences';
+import { deriveTitleBody } from '../../utils/entryUtils';
 import SliderValueBar from '../groups/SliderValueBar';
 import type { Entry, Group } from '../../types';
 
@@ -17,19 +18,6 @@ const panelStyle: React.CSSProperties = {
   width: 'min(820px, 92vw)', maxHeight: '85vh', overflow: 'auto',
   background: 'var(--surface)', border: '1px solid var(--border)',
   borderRadius: '14px', boxShadow: 'var(--shadow-lg)', padding: '20px',
-};
-
-const deriveTitleBody = (content = ''): { title: string; body: string } => {
-  const text = (content || '').replace(/\r\n/g, '\n').trim();
-  if (!text) return { title: '', body: '' };
-  const lines = text.split('\n');
-  const first = (lines[0] || '').trim();
-  const heading = first.match(/^#{1,6}\s+(.+?)\s*$/);
-  if (heading) return { title: heading[1].trim(), body: lines.slice(1).join('\n').trim() };
-  if (lines.length > 1) return { title: first, body: lines.slice(1).join('\n').trim() };
-  const idx = first.indexOf(' ');
-  if (idx > 0) return { title: first.slice(0, idx).trim(), body: first.slice(idx + 1).trim() };
-  return { title: first, body: '' };
 };
 
 interface EntryModalProps {
@@ -73,7 +61,20 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
       <div style={panelStyle} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <div id="entry-modal-title" style={{ fontWeight: 600, color: 'var(--text)' }}>{entry.date}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div id="entry-modal-title" style={{ fontWeight: 600, color: 'var(--text)' }}>{entry.date}</div>
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                color: 'color-mix(in oklab, var(--text), transparent 45%)',
+                background: 'color-mix(in oklab, var(--border), transparent 30%)',
+                border: '1px solid var(--border)',
+                borderRadius: '4px',
+                padding: '1px 6px',
+                letterSpacing: '0.03em',
+                textTransform: 'uppercase',
+              }}>Preview</span>
+            </div>
             {entry.created_at && (
               <div style={{ fontSize: '0.85rem', color: 'color-mix(in oklab, var(--text), transparent 30%)' }}>
                 {formatTime(new Date(entry.created_at))}
@@ -92,10 +93,11 @@ const EntryModal = ({ isOpen, entry, onClose, onDelete, isDeleting = false, onEd
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 disabled={isDeleting}
-                style={{ background: 'var(--accent-bg)', color: '#fff', border: '1px solid var(--accent-bg)', borderRadius: 10, padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, boxShadow: 'var(--shadow-sm)' }}
-                title="Edit entry" aria-label="Edit entry"
+                style={{ background: 'var(--accent-bg)', color: '#fff', border: '1px solid var(--accent-bg)', borderRadius: 10, padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', fontWeight: 600, boxShadow: 'var(--shadow-sm)', fontSize: '0.85rem' }}
+                title="Open in editor" aria-label="Edit entry"
               >
-                <Pencil size={18} />
+                <Pencil size={15} />
+                <span>Edit</span>
               </button>
             )}
             {onDelete && (

@@ -89,7 +89,7 @@ const LandingPage = () => {
 
       <section id="cta" className="landing__section landing__section--cta">
         <div className="landing__cta">
-          <div><h2>Take the weight off your mind.</h2><p>Get up and running in minutes with a single Docker command. Self-host with confidence.</p></div>
+          <div><h2>Take the weight off your mind.</h2><p>Deploy on Cloudflare Pages with D1 and keep your journal data under your control.</p></div>
           <div className="landing__cta-buttons">
             <Link className="landing__button landing__button--primary" to="/dashboard">Open the app</Link>
             <a className="landing__button landing__button--ghost" href="https://github.com/shirsakm/nightlio" target="_blank" rel="noreferrer">View on GitHub</a>

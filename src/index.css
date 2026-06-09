@@ -594,3 +594,12 @@ html[data-color="nord"][data-theme="light"] {
   --skeleton-a: rgba(0,0,0,0.06);
   --skeleton-b: rgba(0,0,0,0.12);
 }
+
+/* Slider thumb color driven by --thumb-color CSS variable set inline */
+input[type="range"]::-webkit-slider-thumb {
+  background-color: var(--thumb-color, var(--accent-600));
+}
+input[type="range"]::-moz-range-thumb {
+  background-color: var(--thumb-color, var(--accent-600));
+  border: none;
+}

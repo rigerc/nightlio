@@ -34,184 +34,230 @@ INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `i
 --> statement-breakpoint
 INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Sleep', '#6366f1', 'Moon', 1, 'category');
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'well-rested', 'Moon', 0 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Slept well', 'Moon', 0 FROM `groups` WHERE `name` = 'Sleep';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'refreshed', 'Sun', 1 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Poor sleep', 'CloudRain', 1 FROM `groups` WHERE `name` = 'Sleep';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'napped', 'Cloud', 2 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Nap', 'Cloud', 2 FROM `groups` WHERE `name` = 'Sleep';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'relaxed', NULL, 3 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Overslept', 'AlarmClock', 3 FROM `groups` WHERE `name` = 'Sleep';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'downtime', NULL, 4 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Interrupted sleep', 'Wind', 4 FROM `groups` WHERE `name` = 'Sleep';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'tired', 'ZapOff', 5 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Early wake-up', 'Sunrise', 5 FROM `groups` WHERE `name` = 'Sleep';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'groggy', 'Cloud', 6 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Physical Activity', '#84cc16', 'Dumbbell', 2, 'category');
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'exhausted', 'Frown', 7 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Walking', 'Footprints', 0 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'restless', 'Wind', 8 FROM `groups` WHERE `name` = 'Sleep';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Running', 'PersonStanding', 1 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Productivity', '#f59e0b', 'Target', 2, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Cycling', 'Bike', 2 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'focused', 'Target', 0 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Gym', 'Dumbbell', 3 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'motivated', 'Zap', 1 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Team sport', 'Trophy', 4 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'accomplished', 'CircleCheck', 2 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Yoga', 'Leaf', 5 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'productive', 'Briefcase', 3 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Stretching', 'MoveHorizontal', 6 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'creative', 'Lightbulb', 4 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Outdoor activity', 'TreePine', 7 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'busy', 'Clock', 5 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Physical labor', 'Hammer', 8 FROM `groups` WHERE `name` = 'Physical Activity';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'distracted', 'Phone', 6 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Social', '#3b82f6', 'Users', 3, 'category');
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'scattered', 'Wind', 7 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Time with partner', 'Heart', 0 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'overwhelmed', 'CloudRain', 8 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Family time', 'Home', 1 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'low-energy', 'ZapOff', 9 FROM `groups` WHERE `name` = 'Productivity';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Friends', 'Users', 2 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Health', '#10b981', 'Activity', 3, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Group activity', 'UserPlus', 3 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'energetic', 'Zap', 0 FROM `groups` WHERE `name` = 'Health';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Meaningful conversation', 'MessageCircle', 4 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'active', 'Activity', 1 FROM `groups` WHERE `name` = 'Health';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Casual socializing', 'Coffee', 5 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'healthy', 'Heart', 2 FROM `groups` WHERE `name` = 'Health';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Networking', 'Network', 6 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'sick', 'Pill', 3 FROM `groups` WHERE `name` = 'Health';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Social conflict', 'Zap', 7 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'sore', 'Dumbbell', 4 FROM `groups` WHERE `name` = 'Health';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Social rejection', 'UserMinus', 8 FROM `groups` WHERE `name` = 'Social';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'sluggish', 'ZapOff', 5 FROM `groups` WHERE `name` = 'Health';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Romance', '#f43f5e', 'Heart', 4, 'category');
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Social', '#3b82f6', 'Users', 4, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Quality time with partner', 'Heart', 0 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'connected', 'Users', 0 FROM `groups` WHERE `name` = 'Social';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Date night', 'Sparkles', 1 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'social', 'MessageCircle', 1 FROM `groups` WHERE `name` = 'Social';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Physical affection', 'Handshake', 2 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'supported', 'ThumbsUp', 2 FROM `groups` WHERE `name` = 'Social';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Meaningful conversation', 'MessageCircle', 3 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'family time', NULL, 3 FROM `groups` WHERE `name` = 'Social';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Conflict/argument', 'Zap', 4 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'quality time', NULL, 4 FROM `groups` WHERE `name` = 'Social';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Feeling connected', 'Link', 5 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'isolated', 'Cloud', 5 FROM `groups` WHERE `name` = 'Social';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Feeling distant', 'Cloud', 6 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'missing someone', 'Heart', 6 FROM `groups` WHERE `name` = 'Social';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Long-distance moment', 'Phone', 7 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Romance', '#f43f5e', 'Heart', 5, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Acts of service', 'Gift', 8 FROM `groups` WHERE `name` = 'Romance';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'loved', 'Heart', 0 FROM `groups` WHERE `name` = 'Romance';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Work & Study', '#f59e0b', 'Briefcase', 5, 'category');
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'affectionate', 'Heart', 1 FROM `groups` WHERE `name` = 'Romance';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Deep work', 'Target', 0 FROM `groups` WHERE `name` = 'Work & Study';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'romantic', 'Sparkles', 2 FROM `groups` WHERE `name` = 'Romance';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Meetings', 'Users', 1 FROM `groups` WHERE `name` = 'Work & Study';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'intimate', 'Heart', 3 FROM `groups` WHERE `name` = 'Romance';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Administrative tasks', 'ClipboardList', 2 FROM `groups` WHERE `name` = 'Work & Study';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'distant', 'Cloud', 4 FROM `groups` WHERE `name` = 'Romance';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Learning', 'GraduationCap', 3 FROM `groups` WHERE `name` = 'Work & Study';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'heartbroken', 'Frown', 5 FROM `groups` WHERE `name` = 'Romance';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Exam/study session', 'BookOpen', 4 FROM `groups` WHERE `name` = 'Work & Study';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'longing', 'Moon', 6 FROM `groups` WHERE `name` = 'Romance';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Deadline pressure', 'Clock', 5 FROM `groups` WHERE `name` = 'Work & Study';
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Sports', '#84cc16', 'Dumbbell', 6, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Overtime', 'Timer', 6 FROM `groups` WHERE `name` = 'Work & Study';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'worked out', 'Dumbbell', 0 FROM `groups` WHERE `name` = 'Sports';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Job searching', 'Briefcase', 7 FROM `groups` WHERE `name` = 'Work & Study';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'ran', 'Footprints', 1 FROM `groups` WHERE `name` = 'Sports';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Food & Drink', '#f97316', 'Utensils', 6, 'category');
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'cycled', 'Bike', 2 FROM `groups` WHERE `name` = 'Sports';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Home-cooked meal', 'Utensils', 0 FROM `groups` WHERE `name` = 'Food & Drink';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'walked', 'Footprints', 3 FROM `groups` WHERE `name` = 'Sports';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Restaurant', 'UtensilsCrossed', 1 FROM `groups` WHERE `name` = 'Food & Drink';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'stretched', 'PersonStanding', 4 FROM `groups` WHERE `name` = 'Sports';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Healthy meal', 'Apple', 2 FROM `groups` WHERE `name` = 'Food & Drink';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'yoga', 'Leaf', 5 FROM `groups` WHERE `name` = 'Sports';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Fast food', 'Pizza', 3 FROM `groups` WHERE `name` = 'Food & Drink';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'skipped workout', 'ZapOff', 6 FROM `groups` WHERE `name` = 'Sports';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Alcohol', 'Wine', 4 FROM `groups` WHERE `name` = 'Food & Drink';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'sedentary', 'Tv', 7 FROM `groups` WHERE `name` = 'Sports';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Excess caffeine', 'Coffee', 5 FROM `groups` WHERE `name` = 'Food & Drink';
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Mental', '#8b5cf6', 'Brain', 7, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Skipped meal', 'Clock', 6 FROM `groups` WHERE `name` = 'Food & Drink';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'meditated', 'Brain', 0 FROM `groups` WHERE `name` = 'Mental';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Hydrated well', 'Droplets', 7 FROM `groups` WHERE `name` = 'Food & Drink';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'journaled', 'Pencil', 1 FROM `groups` WHERE `name` = 'Mental';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Self-Care', '#10b981', 'Leaf', 7, 'category');
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'mindful', 'Leaf', 2 FROM `groups` WHERE `name` = 'Mental';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Meditation', 'Brain', 0 FROM `groups` WHERE `name` = 'Self-Care';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'therapy', 'MessageCircle', 3 FROM `groups` WHERE `name` = 'Mental';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Journaling', 'Notebook', 1 FROM `groups` WHERE `name` = 'Self-Care';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'racing thoughts', 'Wind', 4 FROM `groups` WHERE `name` = 'Mental';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Therapy', 'MessageCircle', 2 FROM `groups` WHERE `name` = 'Self-Care';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'burned out', 'Flame', 5 FROM `groups` WHERE `name` = 'Mental';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Personal grooming', 'Sparkles', 3 FROM `groups` WHERE `name` = 'Self-Care';
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Chores', '#78716c', 'Home', 8, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Bath/shower', 'Droplets', 4 FROM `groups` WHERE `name` = 'Self-Care';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'cleaned', 'Sparkles', 0 FROM `groups` WHERE `name` = 'Chores';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Mindfulness', 'Leaf', 5 FROM `groups` WHERE `name` = 'Self-Care';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'cooked', 'Utensils', 1 FROM `groups` WHERE `name` = 'Chores';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Medical appointment', 'Stethoscope', 6 FROM `groups` WHERE `name` = 'Self-Care';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'groceries', 'ShoppingBag', 2 FROM `groups` WHERE `name` = 'Chores';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Medication taken', 'Pill', 7 FROM `groups` WHERE `name` = 'Self-Care';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'laundry', 'Cloud', 3 FROM `groups` WHERE `name` = 'Chores';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Emotional Regulation', '#ec4899', 'Brain', 8, 'category');
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'tidied', 'Home', 4 FROM `groups` WHERE `name` = 'Chores';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Breathing exercise', 'Wind', 0 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'behind on chores', 'Clock', 5 FROM `groups` WHERE `name` = 'Chores';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Grounding', 'Leaf', 1 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Hobbies', '#06b6d4', 'Sparkles', 9, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Emotional journaling', 'Notebook', 2 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'read', 'BookOpen', 0 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Cried/released emotions', 'Droplets', 3 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'gamed', 'Gamepad2', 1 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Set a boundary', 'Shield', 4 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'creative', 'Lightbulb', 2 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Asked for help', 'HelpCircle', 5 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'music', 'Music', 3 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Took a break', 'PauseCircle', 6 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'art', 'Pencil', 4 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Suppressed emotions', 'Lock', 7 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'crafts', 'Sparkles', 5 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Emotional outburst', 'Flame', 8 FROM `groups` WHERE `name` = 'Emotional Regulation';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'outdoor', 'TreePine', 6 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Leisure & Entertainment', '#06b6d4', 'Tv', 9, 'category');
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'watched a show/movie', NULL, 7 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Watching TV', 'Tv', 0 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'learned something new', 'Lightbulb', 8 FROM `groups` WHERE `name` = 'Hobbies';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Movie', 'Film', 1 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Food', '#f97316', 'Utensils', 10, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Gaming', 'Gamepad2', 2 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'ate well', 'Apple', 0 FROM `groups` WHERE `name` = 'Food';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Reading', 'BookOpen', 3 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'balanced meals', 'Apple', 1 FROM `groups` WHERE `name` = 'Food';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Music', 'Music', 4 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'cooked at home', 'Utensils', 2 FROM `groups` WHERE `name` = 'Food';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Browsing internet', 'Globe', 5 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'skipped meals', 'Clock', 3 FROM `groups` WHERE `name` = 'Food';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Social media', 'Phone', 6 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'junk food', 'Pizza', 4 FROM `groups` WHERE `name` = 'Food';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Podcast', 'Headphones', 7 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'overate', 'Utensils', 5 FROM `groups` WHERE `name` = 'Food';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Relaxing', 'Sofa', 8 FROM `groups` WHERE `name` = 'Leisure & Entertainment';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'alcohol', 'Coffee', 6 FROM `groups` WHERE `name` = 'Food';
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Creativity & Hobbies', '#8b5cf6', 'Palette', 10, 'category');
 --> statement-breakpoint
-INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Bad Habits', '#64748b', 'ZapOff', 11, 'category');
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Writing', 'Pencil', 0 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'smoked', 'Wind', 0 FROM `groups` WHERE `name` = 'Bad Habits';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Drawing', 'Brush', 1 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'drank too much', 'Coffee', 1 FROM `groups` WHERE `name` = 'Bad Habits';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Photography', 'Camera', 2 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'late night screen time', 'Phone', 2 FROM `groups` WHERE `name` = 'Bad Habits';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Crafting', 'Scissors', 3 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'skipped meds', 'Pill', 3 FROM `groups` WHERE `name` = 'Bad Habits';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Cooking', 'Utensils', 4 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'no exercise', 'ZapOff', 4 FROM `groups` WHERE `name` = 'Bad Habits';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Music practice', 'Music', 5 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
 --> statement-breakpoint
-INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'too much caffeine', 'Coffee', 5 FROM `groups` WHERE `name` = 'Bad Habits';
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Building projects', 'Hammer', 6 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Collecting', 'Package', 7 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Gardening', 'Flower2', 8 FROM `groups` WHERE `name` = 'Creativity & Hobbies';
+--> statement-breakpoint
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Nature & Environment', '#22c55e', 'TreePine', 11, 'category');
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Time outdoors', 'Sun', 0 FROM `groups` WHERE `name` = 'Nature & Environment';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Park visit', 'TreePine', 1 FROM `groups` WHERE `name` = 'Nature & Environment';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Beach', 'Waves', 2 FROM `groups` WHERE `name` = 'Nature & Environment';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Hiking', 'Mountain', 3 FROM `groups` WHERE `name` = 'Nature & Environment';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Good weather', 'CloudSun', 4 FROM `groups` WHERE `name` = 'Nature & Environment';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Bad weather', 'CloudRain', 5 FROM `groups` WHERE `name` = 'Nature & Environment';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Sunlight exposure', 'Sunrise', 6 FROM `groups` WHERE `name` = 'Nature & Environment';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Travel', 'Plane', 7 FROM `groups` WHERE `name` = 'Nature & Environment';
+--> statement-breakpoint
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`) VALUES ('Responsibilities & Life Admin', '#78716c', 'Home', 12, 'category');
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Housework', 'Home', 0 FROM `groups` WHERE `name` = 'Responsibilities & Life Admin';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Cleaning', 'Sparkles', 1 FROM `groups` WHERE `name` = 'Responsibilities & Life Admin';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Shopping', 'ShoppingBag', 2 FROM `groups` WHERE `name` = 'Responsibilities & Life Admin';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Errands', 'MapPin', 3 FROM `groups` WHERE `name` = 'Responsibilities & Life Admin';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Financial tasks', 'DollarSign', 4 FROM `groups` WHERE `name` = 'Responsibilities & Life Admin';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Childcare', 'Baby', 5 FROM `groups` WHERE `name` = 'Responsibilities & Life Admin';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Maintenance', 'Wrench', 6 FROM `groups` WHERE `name` = 'Responsibilities & Life Admin';
+--> statement-breakpoint
+INSERT INTO `group_options` (`group_id`, `name`, `icon`, `sort_order`) SELECT `id`, 'Bureaucracy', 'FileText', 7 FROM `groups` WHERE `name` = 'Responsibilities & Life Admin';
+--> statement-breakpoint
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`, `slider_min`, `slider_max`, `slider_labels`) VALUES ('Sleep Quality', '#6366f1', 'Moon', 13, 'slider', 1, 5, '["Terrible","Poor","Okay","Good","Great"]');
+--> statement-breakpoint
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`, `slider_min`, `slider_max`, `slider_labels`) VALUES ('Positivity', '#eab308', 'Sparkles', 14, 'slider', 1, 5, '["Very low","Low","Neutral","High","Very high"]');
+--> statement-breakpoint
+INSERT INTO `groups` (`name`, `color`, `icon`, `sort_order`, `type`, `slider_min`, `slider_max`, `slider_labels`) VALUES ('Overwhelm', '#ef4444', 'Zap', 15, 'slider', 1, 5, '["Minimal","Mild","Moderate","High","Overwhelming"]');

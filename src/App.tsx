@@ -58,6 +58,18 @@ const AppContent = () => {
     });
   }, [setPastEntries]);
 
+  const handleEntryUpserted = useCallback((
+    updatedEntry: Partial<Entry> & { id: number },
+    opts?: { isNew?: boolean }
+  ) => {
+    upsertEntry(updatedEntry);
+    if (opts?.isNew) refreshHistory();
+  }, [upsertEntry, refreshHistory]);
+
+  const handleEntrySaved = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
+
   const handleEntryDeleted = useCallback((deletedEntryId: number) => {
     setPastEntries((prev) => prev.filter((entry) => entry.id !== deletedEntryId));
   }, [setPastEntries]);
@@ -73,15 +85,6 @@ const AppContent = () => {
     navigate('.', { state: { ...locationState, mood: moodValue }, replace: true });
   };
 
-  const handleEntryUpdated = useCallback((
-    updatedEntry: Partial<Entry> & { id: number },
-    options: { navigateAfterSave?: boolean; refreshAfterSave?: boolean } = {}
-  ) => {
-    const { navigateAfterSave = true, refreshAfterSave = true } = options;
-    upsertEntry(updatedEntry);
-    if (navigateAfterSave) navigate('/dashboard');
-    if (refreshAfterSave) refreshHistory();
-  }, [upsertEntry, navigate, refreshHistory]);
 
   const displayEntries = searchResults !== null ? searchResults : pastEntries;
   const isEntryView = location.pathname.endsWith('/entry');
@@ -150,7 +153,8 @@ const AppContent = () => {
                     onBack={handleBackToHistory}
                     onEntryDeleted={handleEntryDeleted}
                     editingEntry={editingEntry}
-                    onEntryUpdated={handleEntryUpdated}
+                    onEntryUpserted={handleEntryUpserted}
+                    onEntrySaved={handleEntrySaved}
                     onEditMoodSelect={handleEditMoodSelect}
                     onSelectMood={handleMoodSelect}
                   />

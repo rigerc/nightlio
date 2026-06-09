@@ -4,6 +4,7 @@ import type { LucideProps } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useMutation } from '@tanstack/react-query';
 import {
   AlertCircle,
   ArrowLeft,
@@ -11,6 +12,7 @@ import {
   Clock3,
   CloudOff,
   Loader2,
+  Save,
   Star,
 } from 'lucide-react';
 import MoodPicker from '../components/mood/MoodPicker';
@@ -23,7 +25,7 @@ import type { MarkdownAreaRef } from '../components/MarkdownArea';
 import apiService from '../services/api';
 import { useToast } from '../components/ui/ToastProvider';
 import { useBurner } from '../contexts/BurnerContext';
-import type { MoodValue, Entry, Group, Selection, SliderValue } from '../types';
+import type { MoodValue, Entry, Group, Selection, SliderValue, MoodCreateResponse, MoodUpdateResponse } from '../types';
 
 const DEFAULT_MARKDOWN = '';
 const dateToInputValue = (displayDate: string): string => {
@@ -71,6 +73,8 @@ interface LatestPayload {
   snapshot: string;
 }
 
+type MutationVariables = LatestPayload & { entryId: number | null };
+
 interface EntryViewProps {
   selectedMood?: MoodValue;
   groups: Group[];
@@ -78,10 +82,11 @@ interface EntryViewProps {
   onEntryDeleted: (id: number) => void;
   onSelectMood: (moodValue: MoodValue) => void;
   editingEntry?: Entry | null;
-  onEntryUpdated: (
+  onEntryUpserted: (
     entry: Partial<Entry> & { id: number },
-    options?: { navigateAfterSave?: boolean; refreshAfterSave?: boolean }
+    opts?: { isNew?: boolean }
   ) => void;
+  onEntrySaved: () => void;
   onEditMoodSelect?: (moodValue: MoodValue) => void;
 }
 
@@ -141,7 +146,8 @@ const EntryView = ({
   onEntryDeleted,
   onSelectMood,
   editingEntry = null,
-  onEntryUpdated,
+  onEntryUpserted,
+  onEntrySaved,
   onEditMoodSelect,
 }: EntryViewProps) => {
   const isEditing = Boolean(editingEntry);
@@ -163,13 +169,13 @@ const EntryView = ({
   const markdownRef = useRef<MarkdownAreaRef | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHydratingEditorRef = useRef(false);
-  const saveInFlightRef = useRef(false);
-  const pendingSaveRef = useRef(false);
   const latestPayloadRef = useRef<LatestPayload | null>(null);
   const lastSavedSnapshotRef = useRef('');
   const activeEntryIdRef = useRef<number | null>(activeEntryId);
   const createdByAutosaveRef = useRef(false);
   const skipAutosaveFlushRef = useRef(false);
+  // Updated each render — safe to call from stale-closure contexts (timeouts)
+  const triggerSaveRef = useRef<(payload: SavePayload, snapshot: string) => void>(() => {});
 
   const { show } = useToast();
   const { isBurnerMode } = useBurner();
@@ -184,6 +190,95 @@ const EntryView = ({
   useEffect(() => {
     activeEntryIdRef.current = activeEntryId;
   }, [activeEntryId]);
+
+  const saveMutation = useMutation<MoodCreateResponse | MoodUpdateResponse, Error, MutationVariables>({
+    mutationFn: async ({ payload, entryId }) => {
+      if (entryId !== null) {
+        return apiService.updateMoodEntry(entryId, { ...payload, mood: payload.mood ?? undefined });
+      }
+      const now = new Date();
+      return apiService.createMoodEntry({
+        mood: payload.mood as number,
+        content: payload.content,
+        selected_options: payload.selected_options,
+        slider_values: payload.slider_values,
+        date: now.toLocaleDateString(),
+        time: now.toISOString(),
+        is_important: payload.is_important,
+        important_reason: payload.important_reason,
+      });
+    },
+    onMutate: () => {
+      setSaveState('saving');
+      setSaveErrorMessage('');
+    },
+    onSuccess: (data, variables) => {
+      lastSavedSnapshotRef.current = variables.snapshot;
+      setLastSavedAt(new Date());
+      setSaveState('saved');
+
+      if (variables.entryId === null) {
+        const response = data as MoodCreateResponse;
+        const newEntryId = response?.entry_id;
+        if (newEntryId) {
+          setActiveEntryId(newEntryId);
+          activeEntryIdRef.current = newEntryId;
+          createdByAutosaveRef.current = true;
+          const { payload } = variables;
+          const now = new Date();
+          onEntryUpserted(
+            {
+              id: newEntryId,
+              mood: payload.mood as MoodValue | undefined,
+              content: payload.content,
+              date: now.toLocaleDateString(),
+              created_at: now.toISOString(),
+              selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
+              slider_values: normalizeSliderValues(payload.slider_values).map(([gId, val]) => ({ group_id: gId, value: val } as SliderValue)),
+              is_important: payload.is_important,
+              important_reason: payload.is_important ? payload.important_reason : null,
+            },
+            { isNew: true }
+          );
+          if (response?.new_achievements?.length) {
+            show('Saved. New achievements unlocked.', 'success');
+          }
+        }
+      } else {
+        const response = data as MoodUpdateResponse;
+        const { payload } = variables;
+        const updatedEntry: Partial<Entry> & { id: number } = response?.entry
+          ? { ...response.entry, selections: response.entry.selections ?? [], slider_values: response.entry.slider_values ?? [] }
+          : {
+              id: variables.entryId,
+              mood: payload.mood as MoodValue | undefined,
+              content: payload.content,
+              selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
+              slider_values: normalizeSliderValues(payload.slider_values).map(([gId, val]) => ({ group_id: gId, value: val } as SliderValue)),
+              is_important: payload.is_important,
+              important_reason: payload.is_important ? payload.important_reason : null,
+            };
+        onEntryUpserted(updatedEntry);
+      }
+    },
+    onError: (error) => {
+      console.error('Autosave failed:', error);
+      setSaveState('error');
+      setSaveErrorMessage('Autosave failed. Retrying when changes continue.');
+    },
+    onSettled: () => {
+      const latest = latestPayloadRef.current;
+      if (latest && latest.snapshot !== lastSavedSnapshotRef.current) {
+        saveMutation.mutate({ payload: latest.payload, snapshot: latest.snapshot, entryId: activeEntryIdRef.current });
+      }
+    },
+  });
+
+  // Kept current each render so setTimeout callbacks always use the latest values
+  triggerSaveRef.current = (payload: SavePayload, snapshot: string) => {
+    if (isBurnerMode || saveMutation.isPending) return;
+    saveMutation.mutate({ payload, snapshot, entryId: activeEntryIdRef.current });
+  };
 
   const hydrateEditor = (markdown: string) => {
     isHydratingEditorRef.current = true;
@@ -233,7 +328,6 @@ const EntryView = ({
     setSaveErrorMessage('');
   }, [isEditing, editingEntry, isBurnerMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-
   useEffect(() => {
     if (isBurnerMode) {
       clearAutosaveTimer();
@@ -245,122 +339,21 @@ const EntryView = ({
     }
   }, [isBurnerMode, saveState, clearAutosaveTimer]);
 
-  const executeAutosave = useCallback(
-    async (payload: SavePayload, snapshot: string, silentError = false): Promise<boolean> => {
-      if (isBurnerMode) return false;
-
-      if (saveInFlightRef.current) {
-        pendingSaveRef.current = true;
-        return false;
-      }
-
-      saveInFlightRef.current = true;
-      setSaveState('saving');
-      setSaveErrorMessage('');
-
-      try {
-        if (activeEntryIdRef.current) {
-          const entryId = activeEntryIdRef.current;
-          const response = await apiService.updateMoodEntry(entryId, { ...payload, mood: payload.mood ?? undefined });
-          const updatedEntry: Partial<Entry> & { id: number } = response?.entry
-            ? { ...response.entry, selections: response.entry.selections ?? [], slider_values: response.entry.slider_values ?? [] }
-            : {
-                id: entryId,
-                mood: payload.mood as MoodValue | undefined,
-                content: payload.content,
-                selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
-                slider_values: normalizeSliderValues(payload.slider_values).map(([groupId, value]) => ({ group_id: groupId, value } as SliderValue)),
-                is_important: payload.is_important,
-                important_reason: payload.is_important ? payload.important_reason : null,
-              };
-          onEntryUpdated(updatedEntry, { navigateAfterSave: false, refreshAfterSave: false });
-        } else {
-          const now = new Date();
-          const createPayload = {
-            mood: payload.mood as number,
-            content: payload.content,
-            selected_options: payload.selected_options,
-            slider_values: payload.slider_values,
-            date: now.toLocaleDateString(),
-            time: now.toISOString(),
-            is_important: payload.is_important,
-            important_reason: payload.important_reason,
-          };
-
-          const response = await apiService.createMoodEntry(createPayload);
-          const newEntryId = response?.entry_id;
-
-          if (newEntryId) {
-            setActiveEntryId(newEntryId);
-            activeEntryIdRef.current = newEntryId;
-            createdByAutosaveRef.current = true;
-
-            onEntryUpdated(
-              {
-                id: newEntryId,
-                mood: payload.mood as MoodValue | undefined,
-                content: payload.content,
-                date: createPayload.date,
-                created_at: createPayload.time,
-                selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
-                slider_values: normalizeSliderValues(payload.slider_values).map(([groupId, value]) => ({ group_id: groupId, value } as SliderValue)),
-                is_important: payload.is_important,
-                important_reason: payload.is_important ? payload.important_reason : null,
-              },
-              { navigateAfterSave: false, refreshAfterSave: true }
-            );
-          }
-
-          if (response?.new_achievements?.length) {
-            show('Saved. New achievements unlocked.', 'success');
-          }
-        }
-
-        lastSavedSnapshotRef.current = snapshot;
-        setLastSavedAt(new Date());
-        setSaveState('saved');
-        return true;
-      } catch (error) {
-        console.error('Autosave failed:', error);
-        setSaveState('error');
-        setSaveErrorMessage('Autosave failed. Retrying when changes continue.');
-        if (!silentError) {
-          show('Autosave failed. Your changes are still in the editor.', 'error');
-        }
-        return false;
-      } finally {
-        saveInFlightRef.current = false;
-        if (pendingSaveRef.current) {
-          pendingSaveRef.current = false;
-          const latest = latestPayloadRef.current;
-          if (latest && latest.snapshot !== lastSavedSnapshotRef.current) {
-            void executeAutosave(latest.payload, latest.snapshot, true);
-          }
-        }
-      }
-    },
-    [isBurnerMode, onEntryUpdated, show]
-  );
-
-  const flushPendingSave = useCallback(async (): Promise<boolean> => {
-    if (skipAutosaveFlushRef.current) return true;
+  const flushPendingSave = useCallback(() => {
+    if (skipAutosaveFlushRef.current) return;
     clearAutosaveTimer();
     const latest = latestPayloadRef.current;
-    if (!latest) return true;
-    if (latest.snapshot === lastSavedSnapshotRef.current) return true;
-    return executeAutosave(latest.payload, latest.snapshot);
-  }, [clearAutosaveTimer, executeAutosave]);
+    if (!latest || latest.snapshot === lastSavedSnapshotRef.current) return;
+    if (saveMutation.isPending) return; // onSettled will retry
+    saveMutation.mutate({ payload: latest.payload, snapshot: latest.snapshot, entryId: activeEntryIdRef.current });
+  }, [clearAutosaveTimer, saveMutation]);
 
   useEffect(() => {
     return () => { clearAutosaveTimer(); };
   }, [clearAutosaveTimer]);
 
   useEffect(() => {
-    return () => {
-      if (!skipAutosaveFlushRef.current) {
-        void flushPendingSave();
-      }
-    };
+    return () => { flushPendingSave(); };
   }, [flushPendingSave]);
 
   useEffect(() => {
@@ -368,7 +361,7 @@ const EntryView = ({
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        void flushPendingSave();
+        flushPendingSave();
       }
     };
 
@@ -424,7 +417,7 @@ const EntryView = ({
     }
 
     if (snapshot === lastSavedSnapshotRef.current) {
-      if (!saveInFlightRef.current) {
+      if (!saveMutation.isPending) {
         setSaveState('saved');
       }
       return;
@@ -434,13 +427,12 @@ const EntryView = ({
 
     autosaveTimerRef.current = setTimeout(() => {
       const latest = latestPayloadRef.current;
-      if (!latest) return;
-      if (latest.snapshot === lastSavedSnapshotRef.current) return;
-      void executeAutosave(latest.payload, latest.snapshot);
+      if (!latest || latest.snapshot === lastSavedSnapshotRef.current) return;
+      triggerSaveRef.current(latest.payload, latest.snapshot);
     }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => { clearAutosaveTimer(); };
-  }, [selectedMood, selectedOptions, sliderValues, markdownContent, isImportant, importantReason, isBurnerMode, executeAutosave, clearAutosaveTimer]);
+  }, [selectedMood, selectedOptions, sliderValues, markdownContent, isImportant, importantReason, isBurnerMode, saveMutation.isPending, clearAutosaveTimer]);
 
   const handleOptionToggle = (optionId: number) => {
     const current = getValues('selectedOptions');
@@ -480,7 +472,7 @@ const EntryView = ({
     const newDisplayDate = inputValueToDisplayDate(newInput);
     try {
       await apiService.updateMoodEntry(activeEntryIdRef.current, { date: newDisplayDate });
-      onEntryUpdated({ id: activeEntryIdRef.current, date: newDisplayDate }, { navigateAfterSave: false, refreshAfterSave: false });
+      onEntryUpserted({ id: activeEntryIdRef.current, date: newDisplayDate });
       show('Date updated', 'success');
     } catch {
       show('Failed to update date', 'error');
@@ -506,12 +498,6 @@ const EntryView = ({
 
   const handleCancel = async () => {
     clearAutosaveTimer();
-
-    if (!isEditing && !isBurnerMode && saveInFlightRef.current && !activeEntryIdRef.current) {
-      show('Autosave is still finishing. Please tap Cancel again in a moment.', 'info');
-      return;
-    }
-
     skipAutosaveFlushRef.current = true;
 
     if (isBurnerMode && !isEditing) {
@@ -519,15 +505,18 @@ const EntryView = ({
     }
 
     if (!isEditing && createdByAutosaveRef.current && activeEntryIdRef.current) {
+      if (!window.confirm('Discard this draft?')) {
+        skipAutosaveFlushRef.current = false;
+        return;
+      }
       try {
         const draftId = activeEntryIdRef.current;
         await apiService.deleteMoodEntry(draftId);
         onEntryDeleted(draftId);
-        show('Draft discarded.', 'success');
       } catch (error) {
-        console.error('Failed to discard autosaved draft:', error);
+        console.error('Failed to discard draft:', error);
+        show('Could not discard the draft. Please try again.', 'error');
         skipAutosaveFlushRef.current = false;
-        show('Could not discard the autosaved draft. Please try again.', 'error');
         return;
       }
     }
@@ -535,11 +524,30 @@ const EntryView = ({
     onBack();
   };
 
+  const handleSaveAndClose = useCallback(() => {
+    clearAutosaveTimer();
+    skipAutosaveFlushRef.current = true;
+
+    const latest = latestPayloadRef.current;
+    if (latest && latest.snapshot !== lastSavedSnapshotRef.current && !saveMutation.isPending) {
+      saveMutation.mutate({ payload: latest.payload, snapshot: latest.snapshot, entryId: activeEntryIdRef.current });
+    }
+
+    onEntrySaved();
+  }, [clearAutosaveTimer, saveMutation, onEntrySaved]);
+
+  const handleRetryAutosave = useCallback(() => {
+    if (saveState !== 'error') return;
+    const latest = latestPayloadRef.current;
+    if (!latest) return;
+    saveMutation.mutate({ payload: latest.payload, snapshot: latest.snapshot, entryId: activeEntryIdRef.current });
+  }, [saveState, saveMutation]);
+
   const saveStatusMeta: { label: string; Icon: ComponentType<LucideProps> } = (() => {
     if (isBurnerMode) return { label: 'Saving is turned off in burner mode.', Icon: CloudOff };
     if (saveState === 'saving') return { label: 'Saving...', Icon: Loader2 };
     if (saveState === 'dirty') return { label: 'Unsaved changes', Icon: AlertCircle };
-    if (saveState === 'error') return { label: saveErrorMessage || 'Autosave error', Icon: AlertCircle };
+    if (saveState === 'error') return { label: saveErrorMessage || 'Autosave error — tap to retry', Icon: AlertCircle };
     if (saveState === 'saved') {
       const timestamp = lastSavedAt
         ? lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -548,6 +556,8 @@ const EntryView = ({
     }
     return { label: 'Waiting for changes', Icon: Clock3 };
   })();
+
+  const showSaveButton = !isBurnerMode && (isEditing || saveState !== 'idle');
 
   if (!selectedMood && !isEditing) {
     return (
@@ -650,12 +660,19 @@ const EntryView = ({
                   type="button"
                   className="entry-icon-button"
                   onClick={handleCancel}
-                  aria-label="Cancel"
-                  title="Cancel"
+                  aria-label="Back"
+                  title="Back"
                 >
                   <ArrowLeft size={16} aria-hidden="true" />
                 </button>
-                <div className={`entry-autosave-status is-${saveState}`} role="status" aria-live="polite">
+                <div
+                  className={`entry-autosave-status is-${saveState}${saveState === 'error' ? ' is-clickable' : ''}`}
+                  role="status"
+                  aria-live="polite"
+                  onClick={saveState === 'error' ? handleRetryAutosave : undefined}
+                  style={saveState === 'error' ? { cursor: 'pointer' } : undefined}
+                  title={saveState === 'error' ? 'Click to retry' : undefined}
+                >
                   <saveStatusMeta.Icon
                     size={16}
                     className={saveState === 'saving' ? 'is-spinning' : ''}
@@ -663,6 +680,19 @@ const EntryView = ({
                   />
                   <span>{saveStatusMeta.label}</span>
                 </div>
+                {showSaveButton && (
+                  <button
+                    type="button"
+                    className="entry-save-button"
+                    onClick={handleSaveAndClose}
+                    disabled={saveMutation.isPending}
+                    aria-label={isEditing ? 'Save changes' : 'Save entry'}
+                    title={isEditing ? 'Save changes' : 'Save entry'}
+                  >
+                    <Save size={14} aria-hidden="true" />
+                    <span>{isEditing ? 'Save changes' : 'Save entry'}</span>
+                  </button>
+                )}
               </div>
             </MoodDisplay>
           </div>

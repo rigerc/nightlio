@@ -5,10 +5,10 @@ import type { MoodValue } from '../types';
 
 export const DEFAULT_MOOD_ICON_NAMES: Record<MoodValue, string> = {
   1: 'Frown',
-  2: 'Frown',
-  3: 'Meh',
+  2: 'Meh',
+  3: 'CircleMinus',
   4: 'Smile',
-  5: 'Heart',
+  5: 'Laugh',
 };
 
 export interface UsePreferencesReturn {

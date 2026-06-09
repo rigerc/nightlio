@@ -1,79 +1,49 @@
-# 🚀 Quick Start - Get Waymark Running in 2 Minutes
+# Waymark Quickstart
 
-## Option 1: Automated Setup (Recommended)
+Waymark runs on Cloudflare Pages Functions (Hono) and D1.
 
-```bash
-git clone https://github.com/shirsakm/nightlio.git
-cd nightlio
-./setup.sh
-```
-
-That's it! Open http://localhost:5173 in your browser.
-
-## Option 2: Manual Setup
+## 1. Install dependencies
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/shirsakm/nightlio.git
-cd nightlio
-
-# 2. Create environment file
-cp .env.docker .env
-
-# 3. Edit .env file and change SECRET_KEY and JWT_SECRET to random values
-nano .env
-
-# 4. Start with Docker
-docker-compose up -d
-
-# 5. Test it works
-./test.sh
+npm install
 ```
 
-## What You Get
+## 2. Configure local variables
 
-- 🌐 **Web Interface**: http://localhost:5173 (consistent with Vite dev server)
-- 🔌 **API**: http://localhost:5000
-- 📦 **Persistent Data**: Stored in Docker volume
-- 🔒 **Secure**: Random secrets generated
-
-## Port Information
-
-- **Frontend**: `localhost:5173` (same port for both Docker and development!)
-- **API**: `localhost:5000` (Flask backend)
-
-## Next Steps
-
-1. **Create your first mood entry** at http://localhost:5173
-2. **Set up backups** (see [DEPLOYMENT.md](DEPLOYMENT.md))
-3. **Enable HTTPS** for production (see [DEPLOYMENT.md](DEPLOYMENT.md))
-4. **Configure Google OAuth** (optional, see [DOCKER.md](DOCKER.md))
-
-## Troubleshooting
-
-### Ports already in use?
 ```bash
-# Change ports in docker-compose.yml
-ports:
-  - "8080:80"   # Frontend: localhost:8080
-  - "5001:5000" # API: localhost:5001
+cp .env.example .dev.vars
 ```
 
-### Services won't start?
+Edit `.dev.vars` and set a strong `JWT_SECRET`.
+
+## 3. Apply local D1 migrations
+
 ```bash
-# Check what's wrong
-docker-compose logs -f
-
-# Full restart
-docker-compose down
-docker-compose up -d --build
+npm run db:migrate
 ```
 
-### Need help?
-- 📖 [Full Docker Guide](DOCKER.md)
-- 🚀 [Production Guide](DEPLOYMENT.md)
-- 🐛 [Create an Issue](https://github.com/shirsakm/nightlio/issues)
+## 4. Start the local API
 
----
+```bash
+npm run pages:dev
+```
 
-**Tip**: Bookmark http://localhost:3000 and start building your mood tracking habit! 🌙
+## 5. Start the frontend
+
+In another terminal:
+
+```bash
+npm run dev
+```
+
+Open http://localhost:5173.
+
+## Deploy
+
+1. Create a D1 database with `npx wrangler d1 create waymark-db`.
+2. Copy the database ID into `wrangler.toml`.
+3. Run `npm run db:migrate:remote`.
+4. Set `JWT_SECRET` with `npx wrangler pages secret put JWT_SECRET`.
+5. Deploy with `npm run pages:deploy` or connect the repo in Cloudflare Pages.
+
+Docker and the old Python API are no longer supported.

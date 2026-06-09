@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
- * One-time data migration: dumps every row from the legacy FastAPI/SQLite
- * database (api/database_schema.py, e.g. data/nightlio.db) into a SQL file of
- * INSERT statements that can be replayed against D1.
+ * One-time data migration: dumps every row from a legacy Waymark SQLite
+ * database into a SQL file of INSERT statements that can be replayed against D1.
  *
  * Table names and columns are identical between the source SQLite schema and
  * the new Drizzle/D1 schema (functions/_shared/db/schema/*.ts) — this is a

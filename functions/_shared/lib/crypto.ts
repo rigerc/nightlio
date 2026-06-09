@@ -1,7 +1,6 @@
-// AES-256-GCM token encryption via Web Crypto, replacing the Fernet-based
-// scheme in api/services/fitness_service.py (Fernet has no Workers-runtime
-// equivalent). Existing fitness connections must be re-authenticated after
-// migration since ciphertexts are not cross-compatible.
+// AES-256-GCM token encryption via Web Crypto. Existing legacy fitness
+// connections encrypted with the previous Fernet scheme must be re-authenticated
+// after migration because ciphertexts are not cross-compatible.
 
 // Domain-separation label: even when FITNESS_TOKEN_KEY isn't set and callers
 // fall back to JWT_SECRET (see fitness-service.ts::tokenSecret), hashing it

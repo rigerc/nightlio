@@ -3,8 +3,7 @@ import type { Database } from '../db/client';
 import { moodEntries } from '../db/schema';
 import type { DaylioImportPayload, DaylioPreparePayload } from '@shared/schemas/import';
 import { createGroup, createGroupOption, ensureUserGroups } from './group-service';
-import { createMoodEntry, ValidationError } from './mood-service';
-import { checkAchievements } from './achievement-service';
+import { createMoodEntry, finalizeImportBatch, ValidationError } from './mood-service';
 
 export interface PrepareResult {
   groupIds: Record<string, number>;
@@ -108,17 +107,17 @@ export async function importDaylioEntries(
         selected_options: selectedOptions,
         slider_values: sliderValues,
       },
-      { skipAchievements: true }
+      { batchMode: true }
     );
 
     existingDates.add(entry.date);
     imported++;
   }
 
-  // One achievements pass per request instead of per entry keeps large
-  // imports within Cloudflare's per-request subrequest budget.
+  // One achievements pass per import keeps large imports within Cloudflare's
+  // per-request subrequest budget.
   if (imported > 0) {
-    await checkAchievements(db, userId);
+    await finalizeImportBatch(db, userId);
   }
 
   return { imported, skipped };

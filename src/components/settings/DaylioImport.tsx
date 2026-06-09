@@ -1,52 +1,12 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import type { Group } from '../../types';
-import {
-  type ActivityMappingAction,
-  type MatchedOption,
-  type MatchedGroup,
-  type ParsedDaylioRow,
-  type ScaleMappingAction,
-  buildImportPayload,
-  collectUniqueActivities,
-  collectUniqueScales,
-  collectUnknownMoods,
-  matchActivitiesToOptions,
-  matchScalesToGroups,
-  parseDaylioCSV,
-  resolveTempIds,
-  suggestActivityMatch,
-} from '../../utils/daylioImportUtils';
-import apiService from '../../services/api';
+import { useDaylioImport } from '../../hooks/useDaylioImport';
 
 interface Props {
   groups: Group[];
   existingDates: Set<string>;
 }
-
-interface ImportSummary {
-  rows: ParsedDaylioRow[];
-  parseErrors: string[];
-  willSkip: number;
-  unmatchedActivities: string[];
-  unmatchedScales: Array<{ name: string; max: number }>;
-  unknownMoods: string[];
-  matchedActivities: Map<string, MatchedOption>;
-  matchedScales: Map<string, MatchedGroup>;
-  suggestions: Map<string, MatchedOption>;
-  dateRange: { first: string; last: string } | null;
-}
-
-type Step =
-  | { type: 'idle' }
-  | { type: 'parsed'; summary: ImportSummary }
-  | { type: 'mapping'; summary: ImportSummary }
-  | { type: 'importing'; done: number; total: number }
-  | { type: 'done'; imported: number; skipped: number }
-  | { type: 'error'; message: string };
-
-const CHUNK_SIZE = 50;
 
 const MOOD_LEVEL_LABELS: Array<{ value: number; label: string }> = [
   { value: 1, label: '1 — Terrible' },
@@ -58,126 +18,29 @@ const MOOD_LEVEL_LABELS: Array<{ value: number; label: string }> = [
 
 export default function DaylioImport({ groups, existingDates }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
-  const [step, setStep] = useState<Step>({ type: 'idle' });
-  const [activityMappings, setActivityMappings] = useState<Record<string, ActivityMappingAction>>({});
-  const [scaleMappings, setScaleMappings] = useState<Record<string, ScaleMappingAction>>({});
-  const [moodMappings, setMoodMappings] = useState<Record<string, number>>({});
+  const {
+    step,
+    activityMappings,
+    scaleMappings,
+    moodMappings,
+    setActivityMappings,
+    setScaleMappings,
+    setMoodMappings,
+    parse,
+    startImport,
+    advanceToMapping,
+    backToParsed,
+    reset,
+  } = useDaylioImport(groups, existingDates);
+
+  function handleReset() {
+    reset();
+    if (fileRef.current) fileRef.current.value = '';
+  }
 
   function handleFileChange(e: { target: HTMLInputElement }) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const { rows, errors } = parseDaylioCSV(text);
-
-      if (rows.length === 0) {
-        setStep({ type: 'error', message: errors.length > 0 ? errors.join(' ') : 'No entries found in this CSV.' });
-        return;
-      }
-
-      const allActivities = collectUniqueActivities(rows);
-      const allScales = collectUniqueScales(rows);
-      const unknownMoods = collectUnknownMoods(rows);
-      const { matched: matchedActivities, unmatched: unmatchedActivities } = matchActivitiesToOptions(allActivities, groups);
-      const { matched: matchedScales, unmatched: unmatchedScales } = matchScalesToGroups(allScales, groups);
-
-      const willSkip = rows.filter((r) => existingDates.has(r.full_date)).length;
-      const dates = rows.map((r) => r.full_date).sort();
-      const dateRange = dates.length > 0 ? { first: dates[0], last: dates[dates.length - 1] } : null;
-
-      const suggestions = new Map<string, MatchedOption>();
-      const defaultActivityMappings: Record<string, ActivityMappingAction> = {};
-      for (const act of unmatchedActivities) {
-        const suggestion = suggestActivityMatch(act, groups);
-        if (suggestion) {
-          suggestions.set(act, suggestion);
-          defaultActivityMappings[act] = { action: 'map', optionId: suggestion.optionId };
-        } else {
-          defaultActivityMappings[act] = { action: 'create', targetGroupId: 'new-imported' };
-        }
-      }
-      const defaultScaleMappings: Record<string, ScaleMappingAction> = {};
-      for (const scale of unmatchedScales) {
-        defaultScaleMappings[scale.name] = { action: 'create' };
-      }
-      const defaultMoodMappings: Record<string, number> = {};
-      for (const mood of unknownMoods) {
-        defaultMoodMappings[mood] = 3;
-      }
-
-      setActivityMappings(defaultActivityMappings);
-      setScaleMappings(defaultScaleMappings);
-      setMoodMappings(defaultMoodMappings);
-      setStep({
-        type: 'parsed',
-        summary: {
-          rows, parseErrors: errors, willSkip, unmatchedActivities, unmatchedScales,
-          unknownMoods, matchedActivities, matchedScales, suggestions, dateRange,
-        },
-      });
-    };
-    reader.readAsText(file);
-  }
-
-  async function runImport(summary: ImportSummary) {
-    const payload = buildImportPayload(
-      summary.rows,
-      activityMappings,
-      scaleMappings,
-      moodMappings,
-      summary.matchedActivities,
-      summary.matchedScales,
-      summary.unmatchedScales,
-      groups,
-      existingDates
-    );
-
-    const total = payload.entries.length;
-    setStep({ type: 'importing', done: 0, total });
-
-    let imported = 0;
-    let skipped = 0;
-
-    try {
-      // Phase 1: create groups/options, then rewrite entries to real IDs so
-      // each chunked request is self-contained.
-      let entries = payload.entries;
-      if (payload.new_groups.length > 0 || payload.new_options.length > 0) {
-        const prep = await apiService.prepareDaylioImport({
-          new_groups: payload.new_groups,
-          new_options: payload.new_options,
-        });
-        entries = resolveTempIds(entries, prep.group_ids, prep.option_ids);
-      }
-
-      // Phase 2: import in chunks to stay within server request limits.
-      for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
-        const chunk = entries.slice(i, i + CHUNK_SIZE);
-        const result = await apiService.importDaylio({ new_groups: [], new_options: [], entries: chunk });
-        imported += result.imported;
-        skipped += result.skipped;
-        setStep({ type: 'importing', done: Math.min(i + CHUNK_SIZE, entries.length), total });
-      }
-
-      await queryClient.invalidateQueries({ queryKey: ['moods'] });
-      setStep({ type: 'done', imported, skipped });
-    } catch (err) {
-      if (imported > 0) {
-        await queryClient.invalidateQueries({ queryKey: ['moods'] });
-      }
-      const base = err instanceof Error ? err.message : 'Import failed.';
-      const partial = imported > 0
-        ? ` ${imported} entr${imported === 1 ? 'y was' : 'ies were'} imported before the error — retrying is safe, already-imported dates will be skipped.`
-        : '';
-      setStep({ type: 'error', message: base + partial });
-    }
-  }
-
-  function reset() {
-    setStep({ type: 'idle' });
-    if (fileRef.current) fileRef.current.value = '';
+    if (file) parse(file);
   }
 
   if (step.type === 'idle') {
@@ -260,7 +123,7 @@ export default function DaylioImport({ groups, existingDates }: Props) {
           {needsMapping ? (
             <button
               type="button"
-              onClick={() => setStep({ type: 'mapping', summary })}
+              onClick={advanceToMapping}
               className="px-4 py-2 rounded-lg bg-[var(--accent-600)] text-white text-sm hover:opacity-90 transition-opacity"
             >
               Continue to mapping
@@ -268,13 +131,13 @@ export default function DaylioImport({ groups, existingDates }: Props) {
           ) : (
             <button
               type="button"
-              onClick={() => void runImport(summary)}
+              onClick={() => void startImport()}
               className="px-4 py-2 rounded-lg bg-[var(--accent-600)] text-white text-sm hover:opacity-90 transition-opacity"
             >
               Import {toImport} {toImport === 1 ? 'entry' : 'entries'}
             </button>
           )}
-          <button type="button" onClick={reset} className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors">
+          <button type="button" onClick={handleReset} className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors">
             Cancel
           </button>
         </div>
@@ -414,19 +277,19 @@ export default function DaylioImport({ groups, existingDates }: Props) {
         <div className="flex gap-2 flex-wrap pt-2">
           <button
             type="button"
-            onClick={() => void runImport(summary)}
+            onClick={() => void startImport()}
             className="px-4 py-2 rounded-lg bg-[var(--accent-600)] text-white text-sm hover:opacity-90 transition-opacity"
           >
             Import {toImport} {toImport === 1 ? 'entry' : 'entries'}
           </button>
           <button
             type="button"
-            onClick={() => setStep({ type: 'parsed', summary })}
+            onClick={backToParsed}
             className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors"
           >
             Back
           </button>
-          <button type="button" onClick={reset} className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors">
+          <button type="button" onClick={handleReset} className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors">
             Cancel
           </button>
         </div>
@@ -465,7 +328,7 @@ export default function DaylioImport({ groups, existingDates }: Props) {
           >
             View history
           </Link>
-          <button type="button" onClick={reset} className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors">
+          <button type="button" onClick={handleReset} className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors">
             Import another file
           </button>
         </div>
@@ -477,7 +340,7 @@ export default function DaylioImport({ groups, existingDates }: Props) {
     return (
       <div className="space-y-2">
         <p className="mt-0 mb-0 text-sm text-[var(--danger)]" role="alert">{step.message}</p>
-        <button type="button" onClick={reset} className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors">
+        <button type="button" onClick={handleReset} className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] text-sm hover:bg-[var(--accent-bg-softer)] transition-colors">
           Try again
         </button>
       </div>

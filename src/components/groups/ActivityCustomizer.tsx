@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { ArrowLeft, GripVertical, Palette, Plus, SlidersHorizontal, Tag, Trash2 } from 'lucide-react';
-import { useGroups } from '../../hooks/useGroups';
+import { useGroupCatalog } from '../../hooks/useGroupCatalog';
 import { getIconComponent } from '../../utils/iconRegistry';
 import IconPicker from '../ui/IconPicker';
 import ColorPicker from '../ui/ColorPicker';
@@ -454,7 +454,7 @@ const ActivityCustomizer = () => {
     updateGroup, updateGroupOption,
     deleteGroup, deleteGroupOption,
     reorderGroups, reorderGroupOptions,
-  } = useGroups();
+  } = useGroupCatalog();
 
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [draggingGroupId, setDraggingGroupId] = useState<number | null>(null);

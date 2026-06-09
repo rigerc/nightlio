@@ -12,14 +12,13 @@ import {
   deleteEntry,
   deleteMoodLog,
   getCurrentStreak,
-  getEntriesByDateRange,
   getEntryById,
   getEntrySelections,
   getEntrySliderValues,
+  getHydratedEntries,
   getMoodLogs,
   getStatistics,
   updateEntry,
-  getAllEntries,
 } from '../services/mood-service';
 
 const moodQuerySchema = z.object({
@@ -61,20 +60,10 @@ moodRoutes.get('/moods', zValidator('query', moodQuerySchema), async (c) => {
   const { start_date: startDate, end_date: endDate } = c.req.valid('query');
   const db = createDb(c.env.DB);
 
-  const entries =
-    startDate && endDate
-      ? await getEntriesByDateRange(db, userId, startDate, endDate)
-      : await getAllEntries(db, userId);
-
-  const hydratedEntries = await Promise.all(
-    entries.map(async (entry) => {
-      const [selections, sliderValues] = await Promise.all([
-        getEntrySelections(db, entry.id),
-        getEntrySliderValues(db, entry.id),
-      ]);
-      return { ...entry, selections, slider_values: sliderValues };
-    })
-  );
+  const hydratedEntries = await getHydratedEntries(db, userId, {
+    startDate: startDate ?? undefined,
+    endDate: endDate ?? undefined,
+  });
 
   return c.json(hydratedEntries);
 });

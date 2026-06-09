@@ -167,11 +167,55 @@ export async function getEntrySliderValues(db: Database, entryId: number): Promi
   return rows.map(({ group_sort_order: _group_sort_order, ...rest }) => rest);
 }
 
+export interface HydratedEntryRecord extends MoodEntryRecord {
+  selections: EntrySelectionRecord[];
+  slider_values: EntrySliderValueRecord[];
+}
+
+export async function getHydratedEntry(
+  db: Database,
+  userId: number,
+  entryId: number
+): Promise<HydratedEntryRecord | null> {
+  const entry = await getEntryById(db, userId, entryId);
+  if (!entry) return null;
+  const [selections, slider_values] = await Promise.all([
+    getEntrySelections(db, entryId),
+    getEntrySliderValues(db, entryId),
+  ]);
+  return { ...entry, selections, slider_values };
+}
+
+export async function getHydratedEntries(
+  db: Database,
+  userId: number,
+  opts?: { startDate?: string; endDate?: string }
+): Promise<HydratedEntryRecord[]> {
+  const entries =
+    opts?.startDate && opts?.endDate
+      ? await getEntriesByDateRange(db, userId, opts.startDate, opts.endDate)
+      : await getAllEntries(db, userId);
+
+  return Promise.all(
+    entries.map(async (entry) => {
+      const [selections, slider_values] = await Promise.all([
+        getEntrySelections(db, entry.id),
+        getEntrySliderValues(db, entry.id),
+      ]);
+      return { ...entry, selections, slider_values };
+    })
+  );
+}
+
+export async function finalizeImportBatch(db: Database, userId: number): Promise<void> {
+  await checkAchievements(db, userId);
+}
+
 export async function createMoodEntry(
   db: Database,
   userId: number,
   input: MoodCreateInput,
-  opts?: { skipAchievements?: boolean }
+  opts?: { batchMode?: boolean }
 ) {
   assertImportantReason(input.is_important, input.important_reason);
 
@@ -233,7 +277,7 @@ export async function createMoodEntry(
     throw err;
   }
 
-  const newAchievements = opts?.skipAchievements ? [] : await checkAchievements(db, userId);
+  const newAchievements = opts?.batchMode ? [] : await checkAchievements(db, userId);
 
   return { entry_id: entryId, new_achievements: newAchievements };
 }

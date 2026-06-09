@@ -32,4 +32,16 @@ export const daylioImportSchema = z.object({
   entries: z.array(importEntrySchema),
 });
 
+export const daylioPrepareSchema = z.object({
+  new_groups: z.array(newGroupSchema).default([]),
+  new_options: z.array(newOptionSchema).default([]),
+});
+
 export type DaylioImportPayload = z.infer<typeof daylioImportSchema>;
+export type DaylioPreparePayload = z.infer<typeof daylioPrepareSchema>;
+
+export interface DaylioPrepareResponse {
+  status: string;
+  group_ids: Record<string, number>;
+  option_ids: Record<string, number>;
+}

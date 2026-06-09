@@ -1,40 +1,43 @@
 import { eq } from 'drizzle-orm';
 import type { Database } from '../db/client';
 import { moodEntries } from '../db/schema';
-import type { DaylioImportPayload } from '@shared/schemas/import';
+import type { DaylioImportPayload, DaylioPreparePayload } from '@shared/schemas/import';
 import { createGroup, createGroupOption, ensureUserGroups } from './group-service';
 import { createMoodEntry, ValidationError } from './mood-service';
+import { checkAchievements } from './achievement-service';
+
+export interface PrepareResult {
+  groupIds: Record<string, number>;
+  optionIds: Record<string, number>;
+}
 
 export interface ImportResult {
   imported: number;
   skipped: number;
 }
 
-export async function importDaylioEntries(
+export async function prepareDaylioImport(
   db: Database,
   userId: number,
-  payload: DaylioImportPayload
-): Promise<ImportResult> {
+  payload: DaylioPreparePayload
+): Promise<PrepareResult> {
   await ensureUserGroups(db, userId);
 
-  // Create new groups and build tempId -> realId map
-  const groupIdMap = new Map<string, number>();
+  const groupIds: Record<string, number> = {};
   for (const ng of payload.new_groups) {
-    const realId = await createGroup(db, userId, {
+    groupIds[ng.temp_id] = await createGroup(db, userId, {
       name: ng.name,
       type: ng.type,
       slider_min: ng.slider_min,
       slider_max: ng.slider_max,
     });
-    groupIdMap.set(ng.temp_id, realId);
   }
 
-  // Create new options and build tempId -> realId map
-  const optionIdMap = new Map<string, number>();
+  const optionIds: Record<string, number> = {};
   for (const no of payload.new_options) {
     let groupId: number;
     if (no.group_temp_id) {
-      const resolved = groupIdMap.get(no.group_temp_id);
+      const resolved = groupIds[no.group_temp_id];
       if (resolved === undefined) throw new ValidationError(`Unknown group temp_id: ${no.group_temp_id}`);
       groupId = resolved;
     } else if (no.group_id !== undefined) {
@@ -42,9 +45,23 @@ export async function importDaylioEntries(
     } else {
       throw new ValidationError(`Option "${no.name}" has no group reference`);
     }
-    const realId = await createGroupOption(db, userId, groupId, no.name);
-    optionIdMap.set(no.temp_id, realId);
+    optionIds[no.temp_id] = await createGroupOption(db, userId, groupId, no.name);
   }
+
+  return { groupIds, optionIds };
+}
+
+export async function importDaylioEntries(
+  db: Database,
+  userId: number,
+  payload: DaylioImportPayload
+): Promise<ImportResult> {
+  // Entries may still carry temp references when the client skipped the
+  // prepare step (small imports); resolve them here.
+  const { groupIds, optionIds } = await prepareDaylioImport(db, userId, {
+    new_groups: payload.new_groups,
+    new_options: payload.new_options,
+  });
 
   // Fetch existing entry dates for this user
   const existingRows = await db
@@ -66,7 +83,7 @@ export async function importDaylioEntries(
     const selectedOptions = [
       ...entry.option_ids,
       ...entry.option_temp_ids.map((tid) => {
-        const id = optionIdMap.get(tid);
+        const id = optionIds[tid];
         if (id === undefined) throw new ValidationError(`Unknown option temp_id: ${tid}`);
         return id;
       }),
@@ -75,22 +92,33 @@ export async function importDaylioEntries(
     // Resolve slider temp IDs
     const sliderValues: Record<number, number> = { ...entry.slider_values };
     for (const [tempId, value] of Object.entries(entry.slider_temp_values ?? {})) {
-      const groupId = groupIdMap.get(tempId);
+      const groupId = groupIds[tempId];
       if (groupId === undefined) throw new ValidationError(`Unknown group temp_id in slider: ${tempId}`);
       sliderValues[groupId] = value;
     }
 
-    await createMoodEntry(db, userId, {
-      mood: entry.mood as 1 | 2 | 3 | 4 | 5,
-      date: entry.date,
-      content: entry.content,
-      time: entry.time,
-      selected_options: selectedOptions,
-      slider_values: sliderValues,
-    });
+    await createMoodEntry(
+      db,
+      userId,
+      {
+        mood: entry.mood as 1 | 2 | 3 | 4 | 5,
+        date: entry.date,
+        content: entry.content,
+        time: entry.time,
+        selected_options: selectedOptions,
+        slider_values: sliderValues,
+      },
+      { skipAchievements: true }
+    );
 
     existingDates.add(entry.date);
     imported++;
+  }
+
+  // One achievements pass per request instead of per entry keeps large
+  // imports within Cloudflare's per-request subrequest budget.
+  if (imported > 0) {
+    await checkAchievements(db, userId);
   }
 
   return { imported, skipped };

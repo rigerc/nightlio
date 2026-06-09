@@ -10,7 +10,9 @@ export interface ParsedScale {
 export interface ParsedDaylioRow {
   full_date: string;
   time: string;
-  mood: number;
+  /** 1-5, or null when the CSV used a custom mood name we don't recognise. */
+  mood: number | null;
+  moodName: string;
   activities: string[];
   scales: ParsedScale[];
   content: string;
@@ -130,10 +132,7 @@ export function parseDaylioCSV(csvText: string): ParseResult {
       continue;
     }
 
-    const mood = MOOD_MAP[moodRaw];
-    if (!mood) {
-      errors.push(`Row ${lineNum + 1} (${full_date}): unknown mood "${moodRaw}", defaulting to 3.`);
-    }
+    const mood = MOOD_MAP[moodRaw] ?? null;
 
     const activities = activitiesRaw
       ? activitiesRaw.split('|').map((a) => a.trim()).filter(Boolean)
@@ -155,7 +154,7 @@ export function parseDaylioCSV(csvText: string): ParseResult {
 
     const content = buildEntryContent(noteTitle, noteHtml);
 
-    rows.push({ full_date, time: timeRaw || '00:00', mood: mood ?? 3, activities, scales, content });
+    rows.push({ full_date, time: timeRaw || '00:00', mood, moodName: moodRaw, activities, scales, content });
   }
 
   return { rows, errors };
@@ -194,6 +193,14 @@ export function collectUniqueActivities(rows: ParsedDaylioRow[]): string[] {
   const set = new Set<string>();
   for (const row of rows) {
     for (const a of row.activities) set.add(a);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+export function collectUnknownMoods(rows: ParsedDaylioRow[]): string[] {
+  const set = new Set<string>();
+  for (const row of rows) {
+    if (row.mood === null && row.moodName) set.add(row.moodName);
   }
   return [...set].sort((a, b) => a.localeCompare(b));
 }
@@ -269,6 +276,67 @@ export function matchScalesToGroups(
   return { matched, unmatched };
 }
 
+function normalizeForMatch(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const curr = [i];
+    for (let j = 1; j <= n; j++) {
+      curr[j] = Math.min(
+        prev[j] + 1,
+        curr[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    prev = curr;
+  }
+  return prev[n];
+}
+
+/**
+ * Best-effort fuzzy match for an activity name against existing options.
+ * Priority: exact after normalization, then containment ("run" -> "Running"),
+ * then small edit distance ("excercise" -> "exercise").
+ */
+export function suggestActivityMatch(name: string, groups: Group[]): MatchedOption | null {
+  const target = normalizeForMatch(name);
+  if (!target) return null;
+
+  let containsMatch: MatchedOption | null = null;
+  let editMatch: MatchedOption | null = null;
+  let bestEditDistance = Infinity;
+
+  for (const g of groups) {
+    if (g.type !== 'category') continue;
+    for (const opt of g.options) {
+      const candidate = normalizeForMatch(opt.name);
+      if (!candidate) continue;
+      const match: MatchedOption = { optionId: opt.id, groupId: g.id, optionName: opt.name, groupName: g.name };
+      if (candidate === target) return match;
+      if (!containsMatch && target.length >= 3 && candidate.length >= 3 &&
+          (candidate.includes(target) || target.includes(candidate))) {
+        containsMatch = match;
+      }
+      if (target.length >= 4 && candidate.length >= 4) {
+        const dist = levenshtein(target, candidate);
+        if (dist <= 2 && dist < bestEditDistance) {
+          bestEditDistance = dist;
+          editMatch = match;
+        }
+      }
+    }
+  }
+
+  return containsMatch ?? editMatch;
+}
+
 export type ActivityMappingAction =
   | { action: 'map'; optionId: number }
   | { action: 'create'; targetGroupId: number | 'new-imported' }
@@ -283,8 +351,11 @@ export function buildImportPayload(
   rows: ParsedDaylioRow[],
   activityMappings: Record<string, ActivityMappingAction>,
   scaleMappings: Record<string, ScaleMappingAction>,
+  moodMappings: Record<string, number>,
   matchedActivities: Map<string, MatchedOption>,
   matchedScales: Map<string, MatchedGroup>,
+  unmatchedScales: Array<{ name: string; max: number }>,
+  groups: Group[],
   existingDates: Set<string>
 ): DaylioImportPayload {
   // Determine if we need the "Imported Activities" group
@@ -294,6 +365,8 @@ export function buildImportPayload(
 
   const newGroups: DaylioImportPayload['new_groups'] = [];
   const newOptions: DaylioImportPayload['new_options'] = [];
+  const scaleMaxByName = new Map(unmatchedScales.map((s) => [s.name, s.max]));
+  const groupById = new Map(groups.map((g) => [g.id, g]));
 
   if (needsImportedGroup) {
     newGroups.push({ temp_id: '__imported_activities__', name: 'Imported Activities', type: 'category' });
@@ -302,7 +375,8 @@ export function buildImportPayload(
   // Create new groups for unmatched scales that need creation
   for (const [scaleName, action] of Object.entries(scaleMappings)) {
     if (action.action === 'create') {
-      newGroups.push({ temp_id: `__scale_${scaleName}__`, name: scaleName, type: 'slider', slider_min: 1, slider_max: 5 });
+      const max = scaleMaxByName.get(scaleName) ?? 5;
+      newGroups.push({ temp_id: `__scale_${scaleName}__`, name: scaleName, type: 'slider', slider_min: 1, slider_max: max });
     }
   }
 
@@ -321,6 +395,13 @@ export function buildImportPayload(
   }
 
   const entries: DaylioImportPayload['entries'] = [];
+
+  const clampToGroup = (groupId: number, value: number): number => {
+    const g = groupById.get(groupId);
+    const min = g?.slider_min ?? 1;
+    const max = g?.slider_max ?? 5;
+    return Math.min(max, Math.max(min, value));
+  };
 
   for (const row of rows) {
     if (existingDates.has(row.full_date)) continue;
@@ -350,13 +431,13 @@ export function buildImportPayload(
     for (const scale of row.scales) {
       const autoMatch = matchedScales.get(scale.name);
       if (autoMatch) {
-        slider_values[autoMatch.groupId] = scale.value;
+        slider_values[autoMatch.groupId] = clampToGroup(autoMatch.groupId, scale.value);
         continue;
       }
       const mapping = scaleMappings[scale.name];
       if (!mapping || mapping.action === 'skip') continue;
       if (mapping.action === 'map') {
-        slider_values[mapping.groupId] = scale.value;
+        slider_values[mapping.groupId] = clampToGroup(mapping.groupId, scale.value);
       } else if (mapping.action === 'create') {
         slider_temp_values[`__scale_${scale.name}__`] = scale.value;
       }
@@ -367,7 +448,7 @@ export function buildImportPayload(
     entries.push({
       date: row.full_date,
       time: isoTime,
-      mood: row.mood,
+      mood: row.mood ?? moodMappings[row.moodName] ?? 3,
       content: row.content,
       option_ids,
       option_temp_ids,
@@ -377,4 +458,33 @@ export function buildImportPayload(
   }
 
   return { new_groups: newGroups, new_options: newOptions, entries };
+}
+
+/**
+ * Rewrites entries to use real IDs after the prepare call has created
+ * new groups/options server-side, so subsequent chunked import requests
+ * carry no temp references.
+ */
+export function resolveTempIds(
+  entries: DaylioImportPayload['entries'],
+  groupIds: Record<string, number>,
+  optionIds: Record<string, number>
+): DaylioImportPayload['entries'] {
+  return entries.map((entry) => {
+    const option_ids = [
+      ...entry.option_ids,
+      ...entry.option_temp_ids.map((tid) => {
+        const id = optionIds[tid];
+        if (id === undefined) throw new Error(`Server did not return an ID for option "${tid}"`);
+        return id;
+      }),
+    ];
+    const slider_values: Record<number, number> = { ...entry.slider_values };
+    for (const [tempId, value] of Object.entries(entry.slider_temp_values)) {
+      const groupId = groupIds[tempId];
+      if (groupId === undefined) throw new Error(`Server did not return an ID for group "${tempId}"`);
+      slider_values[groupId] = value;
+    }
+    return { ...entry, option_ids, option_temp_ids: [], slider_values, slider_temp_values: {} };
+  });
 }

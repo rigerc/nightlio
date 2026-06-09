@@ -2,7 +2,7 @@ import type {
   AppConfig, AuthResponse, Entry, Goal, GoalCompletion, Group, GroupType,
   MoodCreateResponse, MoodUpdateResponse, MoodLog, Selection, SliderValue, Statistics, Achievement,
 } from '../types';
-import type { DaylioImportPayload } from '../shared/schemas/import';
+import type { DaylioImportPayload, DaylioPreparePayload, DaylioPrepareResponse } from '../shared/schemas/import';
 
 function normalizeBaseUrl(raw: string | undefined): string {
   let v = raw ?? '';
@@ -355,6 +355,13 @@ class ApiService {
     if (end) params.set('end', end);
     const q = params.toString();
     return this.request<GoalCompletion[]>(`/api/goals/${goalId}/completions${q ? `?${q}` : ''}`);
+  }
+
+  prepareDaylioImport(payload: DaylioPreparePayload): Promise<DaylioPrepareResponse> {
+    return this.request<DaylioPrepareResponse>('/api/import/daylio/prepare', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 
   importDaylio(payload: DaylioImportPayload): Promise<{ status: string; imported: number; skipped: number }> {

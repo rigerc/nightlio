@@ -151,7 +151,12 @@ export async function getEntrySliderValues(db: Database, entryId: number): Promi
   return rows.map(({ group_sort_order: _group_sort_order, ...rest }) => rest);
 }
 
-export async function createMoodEntry(db: Database, userId: number, input: MoodCreateInput) {
+export async function createMoodEntry(
+  db: Database,
+  userId: number,
+  input: MoodCreateInput,
+  opts?: { skipAchievements?: boolean }
+) {
   assertImportantReason(input.is_important, input.important_reason);
 
   const isImportant = Boolean(input.is_important);
@@ -212,7 +217,7 @@ export async function createMoodEntry(db: Database, userId: number, input: MoodC
     throw err;
   }
 
-  const newAchievements = await checkAchievements(db, userId);
+  const newAchievements = opts?.skipAchievements ? [] : await checkAchievements(db, userId);
 
   return { entry_id: entryId, new_achievements: newAchievements };
 }

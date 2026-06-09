@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Star } from 'lucide-react';
 import { getMoodIcon } from '../../utils/moodUtils';
-import { usePreferences } from '../../contexts/PreferencesContext';
+import { usePreferences } from '../../hooks/usePreferences';
 import { getIconComponent } from '../../utils/iconRegistry';
+import { deriveTitleBody } from '../../utils/entryUtils';
 import apiService from '../../services/api';
 import { useToast } from '../ui/ToastProvider';
 import EntryModal from './EntryModal';
@@ -18,19 +19,6 @@ const stripMd = (s = '') => s
   .replace(/[*_~`>#[\]()]/g, ' ')
   .replace(/\s+/g, ' ')
   .trim();
-
-const splitTitleBody = (content = ''): { title: string; body: string } => {
-  const text = (content || '').replace(/\r\n/g, '\n').trim();
-  if (!text) return { title: '', body: '' };
-  const lines = text.split('\n');
-  const first = (lines[0] || '').trim();
-  const heading = first.match(/^#{1,6}\s+(.+?)\s*$/);
-  if (heading) return { title: heading[1].trim(), body: lines.slice(1).join('\n').trim() };
-  if (lines.length > 1) return { title: first, body: lines.slice(1).join('\n').trim() };
-  const idx = first.indexOf(' ');
-  if (idx > 0) return { title: first.slice(0, idx).trim(), body: first.slice(idx + 1).trim() };
-  return { title: first, body: '' };
-};
 
 interface HistoryEntryProps {
   entry: Entry;
@@ -48,7 +36,7 @@ const HistoryEntry = ({ entry, onDelete, onEdit, groups = [] }: HistoryEntryProp
   const [open, setOpen] = useState(false);
   const modalHistoryPushed = useRef(false);
 
-  const { title: rawTitle, body: rawBody } = splitTitleBody(entry.content || '');
+  const { title: rawTitle, body: rawBody } = deriveTitleBody(entry.content || '');
   const title = stripMd(rawTitle).slice(0, 80);
   const excerpt = stripMd(rawBody).slice(0, 420);
 

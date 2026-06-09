@@ -97,6 +97,32 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+.entry-save-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent-600);
+  background: var(--accent-600);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.entry-save-button:hover:not(:disabled) {
+  background: var(--accent-700);
+  border-color: var(--accent-700);
+  box-shadow: var(--shadow-md);
+}
+.entry-save-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 @media (max-width: 900px) {
   .entry-grid { display: block; }

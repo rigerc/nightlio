@@ -48,7 +48,7 @@ const AboutPage = () => {
           <p>I shared the initial project with the self-hosted community and received incredible feedback. Waymark is designed from the ground up to be easily self-hosted.</p>
           <p>Since the initial release, I've been hard at work:</p>
           <ul>
-            <li><strong>Docker Support:</strong> The most requested feature is now live, allowing you to spin up an instance in minutes.</li>
+            <li><strong>Cloudflare-first hosting:</strong> Waymark now runs on Pages Functions and D1 for a simpler TypeScript-only stack.</li>
             <li><strong>Desktop-First UI:</strong> Unlike mobile-only apps, Waymark features a layout optimized for desktop use.</li>
             <li><strong>Dark Theme:</strong> Because every developer tool needs a dark mode.</li>
           </ul>

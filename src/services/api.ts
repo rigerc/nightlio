@@ -100,8 +100,11 @@ class ApiService {
     });
   }
 
-  localLogin(): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/api/auth/local/login', { method: 'POST' });
+  localLogin(accessKey?: string): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/api/auth/local/login', {
+      method: 'POST',
+      body: JSON.stringify(accessKey ? { access_key: accessKey } : {}),
+    });
   }
 
   verifyToken(token: string): Promise<{ user: AuthResponse['user'] }> {

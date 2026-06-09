@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { MOODS } from '../../utils/moodUtils';
-import { usePreferences } from '../../contexts/PreferencesContext';
+import { usePreferences } from '../../hooks/usePreferences';
 import type { MoodValue } from '../../types';
 
 interface MoodDisplayProps {

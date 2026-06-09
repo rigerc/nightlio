@@ -105,6 +105,8 @@ export interface AppConfig {
   enable_google_oauth: boolean;
   enable_mood_music: boolean;
   enable_google_health: boolean;
+  local_login_requires_access_key?: boolean;
+  clerk_enabled?: boolean;
   google_client_id?: string;
   google_health_client_id?: string;
 }

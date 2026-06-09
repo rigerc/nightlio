@@ -2,11 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import LoginPage from "./components/auth/LoginPage";
 import NotFound from "./views/NotFound";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, ClerkAuthProvider } from "./contexts/AuthContext";
 import { ConfigProvider } from "./contexts/ConfigContext";
-import { ThemeProvider } from "./contexts/ThemeContext";
 import { BurnerProvider } from "./contexts/BurnerContext";
-import { PreferencesProvider } from "./contexts/PreferencesContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Header from "./components/Header";
 import Sidebar from "./components/navigation/Sidebar";
@@ -58,11 +56,23 @@ const AppContent = () => {
         item.id === entry.id ? { ...item, ...entry } as Entry : item
       );
     });
-  }, []);
+  }, [setPastEntries]);
+
+  const handleEntryUpserted = useCallback((
+    updatedEntry: Partial<Entry> & { id: number },
+    opts?: { isNew?: boolean }
+  ) => {
+    upsertEntry(updatedEntry);
+    if (opts?.isNew) refreshHistory();
+  }, [upsertEntry, refreshHistory]);
+
+  const handleEntrySaved = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
 
   const handleEntryDeleted = useCallback((deletedEntryId: number) => {
     setPastEntries((prev) => prev.filter((entry) => entry.id !== deletedEntryId));
-  }, []);
+  }, [setPastEntries]);
 
   const handleStartEdit = (entry: Entry) => {
     navigate('entry', { state: { entry, mood: entry.mood } });
@@ -75,15 +85,6 @@ const AppContent = () => {
     navigate('.', { state: { ...locationState, mood: moodValue }, replace: true });
   };
 
-  const handleEntryUpdated = useCallback((
-    updatedEntry: Partial<Entry> & { id: number },
-    options: { navigateAfterSave?: boolean; refreshAfterSave?: boolean } = {}
-  ) => {
-    const { navigateAfterSave = true, refreshAfterSave = true } = options;
-    upsertEntry(updatedEntry);
-    if (navigateAfterSave) navigate('/dashboard');
-    if (refreshAfterSave) refreshHistory();
-  }, [upsertEntry, navigate, refreshHistory]);
 
   const displayEntries = searchResults !== null ? searchResults : pastEntries;
   const isEntryView = location.pathname.endsWith('/entry');
@@ -152,7 +153,8 @@ const AppContent = () => {
                     onBack={handleBackToHistory}
                     onEntryDeleted={handleEntryDeleted}
                     editingEntry={editingEntry}
-                    onEntryUpdated={handleEntryUpdated}
+                    onEntryUpserted={handleEntryUpserted}
+                    onEntrySaved={handleEntrySaved}
                     onEditMoodSelect={handleEditMoodSelect}
                     onSelectMood={handleMoodSelect}
                   />
@@ -213,33 +215,32 @@ const AppContent = () => {
   );
 };
 
-function App() {
+function App({ clerkEnabled = false }: { clerkEnabled?: boolean }) {
+  const SelectedAuthProvider = clerkEnabled ? ClerkAuthProvider : AuthProvider;
+
   return (
     <ConfigProvider>
-      <ThemeProvider>
-        <ToastProvider>
-          <BurnerProvider>
-            <AuthProvider>
-              <PreferencesProvider>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/login" replace />} />
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route
-                    path="/dashboard/*"
-                    element={
-                      <ProtectedRoute>
-                        <AppContent />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </PreferencesProvider>
-            </AuthProvider>
-          </BurnerProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <ToastProvider>
+        <BurnerProvider>
+          <SelectedAuthProvider>
+            <Routes>
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/login" element={<LoginPage clerkEnabled={clerkEnabled} />} />
+              <Route path="/sign-up" element={<LoginPage clerkEnabled={clerkEnabled} signUp />} />
+              <Route
+                path="/dashboard/*"
+                element={
+                  <ProtectedRoute>
+                    <AppContent />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </SelectedAuthProvider>
+        </BurnerProvider>
+      </ToastProvider>
     </ConfigProvider>
   );
 }

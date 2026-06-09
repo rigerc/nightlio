@@ -12,7 +12,10 @@ dist
 dist-ssr
 *.local
 .env
-docker-compose.override.yml
+
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
 
 # Editor directories and files
 .vscode/*
@@ -25,13 +28,9 @@ docker-compose.override.yml
 *.sln
 *.sw?
 
-# Flask
+# Python virtualenv/cache directories from legacy checkouts
 venv/
 .venv/
-instance/
-*.pyc
-*.pyo
-*.pyd
 __pycache__/
 
 # Database
@@ -39,9 +38,6 @@ __pycache__/
 *.sqlite
 *.sqlite3
 data/
-
-# Pytest
-*.pytest_cache/
 
 # Agents
 .agents/

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
+import { SignIn, SignUp } from '@clerk/clerk-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfig } from '../../contexts/ConfigContext';
 import './LoginPage.css';
@@ -37,12 +38,13 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const LoginPage = () => {
+const LoginPage = ({ clerkEnabled = false, signUp = false }: { clerkEnabled?: boolean; signUp?: boolean }) => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, localLogin, isAuthenticated } = useAuth();
   const { config } = useConfig();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [selfHostAccessKey, setSelfHostAccessKey] = useState('');
 
   const googleClientId = useMemo(
     () => config.google_client_id || FALLBACK_GOOGLE_CLIENT_ID,
@@ -190,11 +192,38 @@ const LoginPage = () => {
     }
   }, [config.enable_google_oauth]);
 
-  const handleSelfHostContinue = useCallback(() => {
-    window.location.reload();
-  }, []);
+  const handleSelfHostContinue = useCallback(async () => {
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const result = await localLogin(selfHostAccessKey || undefined);
+      if (!result.success) {
+        setMessage(result.error || 'Login failed. Please try again.');
+        return;
+      }
+      navigate('/dashboard', { replace: true });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [localLogin, navigate, selfHostAccessKey]);
 
   const isSelfHost = !config.enable_google_oauth;
+
+  if (clerkEnabled) {
+    return (
+      <div className="login-page">
+        <div className="login-page__card" style={{ maxWidth: '480px', padding: '2rem' }}>
+          <h1 className="login-page__brand-title" style={{ marginBottom: '1.25rem' }}>Waymark</h1>
+          {signUp ? (
+            <SignUp routing="path" path="/sign-up" signInUrl="/login" fallbackRedirectUrl="/dashboard" />
+          ) : (
+            <SignIn routing="path" path="/login" signUpUrl="/sign-up" fallbackRedirectUrl="/dashboard" />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">
@@ -220,21 +249,45 @@ const LoginPage = () => {
         <div style={{ marginTop: '0.5rem' }}>
           <p className="login-page__description" style={{ marginBottom: '1.5rem', fontSize: '0.925rem' }}>
             {isSelfHost
-              ? 'Click continue to start using Waymark locally.'
+              ? config.local_login_requires_access_key
+                ? 'Enter your self-host access key to continue.'
+                : 'Click continue to start using Waymark locally.'
               : 'Sign in to continue tracking your mood journey.'}
           </p>
 
           {message && <p className="login-page__message" style={{ marginBottom: '1rem' }}>{message}</p>}
 
           {isSelfHost ? (
-            <button
-              type="button"
-              className="login-page__button"
-              onClick={handleSelfHostContinue}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Loading…' : 'Continue'}
-            </button>
+            <>
+              {config.local_login_requires_access_key && (
+                <input
+                  type="password"
+                  value={selfHostAccessKey}
+                  onChange={(event) => setSelfHostAccessKey(event.target.value)}
+                  placeholder="Self-host access key"
+                  aria-label="Self-host access key"
+                  className="login-page__input"
+                  style={{
+                    width: '100%',
+                    marginBottom: '0.85rem',
+                    padding: '0.75rem 0.9rem',
+                    borderRadius: '0.75rem',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
+                    font: 'inherit',
+                  }}
+                />
+              )}
+              <button
+                type="button"
+                className="login-page__button"
+                onClick={handleSelfHostContinue}
+                disabled={isLoading || (config.local_login_requires_access_key && !selfHostAccessKey.trim())}
+              >
+                {isLoading ? 'Loading…' : 'Continue'}
+              </button>
+            </>
           ) : (
             <button
               type="button"
@@ -284,7 +337,9 @@ const LoginPage = () => {
             <Lock size={12} aria-hidden="true" style={{ flexShrink: 0 }} />
             <span>
               {isSelfHost
-                ? 'No external authentication required.'
+                ? config.local_login_requires_access_key
+                  ? 'Protected by your self-host access key.'
+                  : 'No external authentication required on localhost.'
                 : 'We only use your Google account for authentication.'}
             </span>
           </div>

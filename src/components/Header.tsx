@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Flame, LogOut, Sun, Moon } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useThemeStore } from '../store/useThemeStore';
 import { useBurner } from '../contexts/BurnerContext';
 import { useToast } from './ui/ToastProvider';
 import { cn } from '../lib/utils';
@@ -42,7 +42,8 @@ interface HeaderProps {
 
 const Header = ({ currentStreak, pastEntries, onSearch, showSearch = true }: HeaderProps) => {
   const { user, logout } = useAuth();
-  const { theme, cycle } = useTheme();
+  const theme = useThemeStore((s) => s.theme);
+  const cycle = useThemeStore((s) => s.cycle);
   const { isBurnerMode, toggleBurnerMode } = useBurner();
   const { show } = useToast();
   const [showAvatar, setShowAvatar] = useState(true);

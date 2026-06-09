@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useConfig } from '../contexts/ConfigContext';
 import { usePreferences } from '../hooks/usePreferences';
 import { useThemeStore } from '../store/useThemeStore';
+import { useGroups } from '../hooks/useGroups';
 import ActivityCustomizer from '../components/groups/ActivityCustomizer';
 import MoodIconCustomizer from '../components/settings/MoodIconCustomizer';
+import DaylioImport from '../components/settings/DaylioImport';
 import FitnessConnectSection from '../components/fitness/FitnessConnectSection';
 import { useFitnessData } from '../hooks/useFitnessData';
-import type { AppConfig } from '../types';
+import apiService from '../services/api';
+import { useQuery } from '@tanstack/react-query';
+import type { AppConfig, Entry } from '../types';
 
 interface ColorSchemeOption {
   id: string;
@@ -53,6 +57,13 @@ const SettingsView = () => {
     config.enable_google_health ?? false,
     config.google_health_client_id,
   );
+  const { groups } = useGroups();
+  const { data: allEntries = [] } = useQuery<Entry[]>({
+    queryKey: ['moods'],
+    queryFn: () => apiService.getMoodEntries(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const existingDates = useMemo(() => new Set(allEntries.map((e) => e.date)), [allEntries]);
 
   const handleTimeFormatChange = async (nextUse24HourTime: boolean) => {
     setIsSavingTimeFormat(true);
@@ -177,6 +188,12 @@ const SettingsView = () => {
           <FitnessConnectSection fitness={fitness} />
         </section>
       )}
+
+      <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Daylio import">
+        <h3 className="mt-0 mb-1 text-[var(--text)]">Import from Daylio</h3>
+        <p className="mt-0 mb-3 text-[var(--text-muted)] text-sm">Import mood entries from a Daylio CSV export. Entries for dates that already exist will be skipped.</p>
+        <DaylioImport groups={groups} existingDates={existingDates} />
+      </section>
 
       <section className="mt-4 border border-[var(--border)] rounded-xl p-4 bg-[var(--surface)]" aria-label="Feature flags">
         <h3 className="mt-0 mb-2 text-[var(--text)]">Feature flags</h3>

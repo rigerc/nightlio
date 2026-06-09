@@ -11,6 +11,7 @@ import { configRoutes } from './routes/config';
 import { fitnessRoutes } from './routes/fitness';
 import { goalRoutes } from './routes/goals';
 import { groupRoutes } from './routes/groups';
+import { importRoutes } from './routes/import';
 import { miscRoutes } from './routes/misc';
 import { moodRoutes } from './routes/mood';
 import { preferencesRoutes } from './routes/preferences';
@@ -49,6 +50,7 @@ export function createApp() {
   app.route('/api', achievementRoutes);
   app.route('/api', preferencesRoutes);
   app.route('/api', fitnessRoutes);
+  app.route('/api', importRoutes);
 
   return app;
 }

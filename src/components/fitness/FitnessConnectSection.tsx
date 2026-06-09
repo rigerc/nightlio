@@ -15,6 +15,7 @@ const FitnessConnectSection = ({ fitness }: FitnessConnectSectionProps) => {
     if (callbackHandled.current) return;
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
+    const state = params.get('state');
     if (!code) return;
     callbackHandled.current = true;
     const url = new URL(window.location.href);
@@ -22,7 +23,7 @@ const FitnessConnectSection = ({ fitness }: FitnessConnectSectionProps) => {
     url.searchParams.delete('state');
     url.searchParams.delete('scope');
     window.history.replaceState({}, '', url.toString());
-    handleCallback(code)
+    handleCallback(code, state)
       .then(() => toast.show('Google Health connected successfully', 'success'))
       .catch((e: Error) => toast.show(`Connection failed: ${e.message}`, 'error'));
   }, [handleCallback, toast]);

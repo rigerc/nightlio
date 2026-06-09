@@ -46,34 +46,58 @@ function validateSliderFields(fields: SliderFields): void {
   }
 }
 
-async function cloneDefaultGroupsForUser(db: Database, userId: number): Promise<void> {
-  const templates = await db.select().from(groups).where(isNull(groups.userId)).orderBy(asc(groups.sortOrder), asc(groups.id));
+type GroupRow = typeof groups.$inferSelect;
 
-  for (const template of templates) {
-    const [inserted] = await db
-      .insert(groups)
+async function cloneGroupForUser(
+  db: Database,
+  userId: number,
+  template: GroupRow
+): Promise<{ groupId: number; optionIdMap: Map<number, number> }> {
+  const [inserted] = await db
+    .insert(groups)
+    .values({
+      userId,
+      name: template.name,
+      color: template.color,
+      icon: template.icon,
+      sortOrder: template.sortOrder,
+      type: template.type,
+      sliderMin: template.sliderMin,
+      sliderMax: template.sliderMax,
+      sliderLabels: template.sliderLabels,
+    })
+    .returning({ id: groups.id });
+
+  const optionIdMap = new Map<number, number>();
+  const options = await db
+    .select()
+    .from(groupOptions)
+    .where(eq(groupOptions.groupId, template.id))
+    .orderBy(asc(groupOptions.sortOrder), asc(groupOptions.id));
+
+  for (const option of options) {
+    const [newOption] = await db
+      .insert(groupOptions)
       .values({
-        userId,
-        name: template.name,
-        color: template.color,
-        icon: template.icon,
-        sortOrder: template.sortOrder,
-        type: template.type,
-        sliderMin: template.sliderMin,
-        sliderMax: template.sliderMax,
-        sliderLabels: template.sliderLabels,
-      })
-      .returning({ id: groups.id });
-
-    const options = await db.select().from(groupOptions).where(eq(groupOptions.groupId, template.id)).orderBy(asc(groupOptions.sortOrder), asc(groupOptions.id));
-    if (options.length > 0) {
-      await db.insert(groupOptions).values(options.map((option) => ({
         groupId: inserted.id,
         name: option.name,
         icon: option.icon,
         sortOrder: option.sortOrder,
-      })));
-    }
+      })
+      .returning({ id: groupOptions.id });
+    optionIdMap.set(option.id, newOption.id);
+  }
+
+  return { groupId: inserted.id, optionIdMap };
+}
+
+async function cloneDefaultGroupsForUser(db: Database, userId: number): Promise<void> {
+  const existingGroups = await db.select({ name: groups.name }).from(groups).where(eq(groups.userId, userId));
+  const existingNames = new Set(existingGroups.map((group) => group.name.toLowerCase()));
+  const templates = await db.select().from(groups).where(isNull(groups.userId)).orderBy(asc(groups.sortOrder), asc(groups.id));
+  for (const template of templates) {
+    if (existingNames.has(template.name.toLowerCase())) continue;
+    await cloneGroupForUser(db, userId, template);
   }
 }
 
@@ -98,13 +122,65 @@ async function userHasGlobalGroupReferences(db: Database, userId: number): Promi
   return Boolean(sliderRef);
 }
 
+async function migrateGlobalGroupReferencesForUser(db: Database, userId: number): Promise<void> {
+  const selectionRefs = await db
+    .select({ selectionId: entrySelections.id, optionId: entrySelections.optionId, groupId: groups.id })
+    .from(entrySelections)
+    .innerJoin(moodEntries, eq(entrySelections.entryId, moodEntries.id))
+    .innerJoin(groupOptions, eq(entrySelections.optionId, groupOptions.id))
+    .innerJoin(groups, eq(groupOptions.groupId, groups.id))
+    .where(and(eq(moodEntries.userId, userId), isNull(groups.userId)));
+
+  const sliderRefs = await db
+    .select({ sliderValueId: entrySliderValues.id, groupId: entrySliderValues.groupId })
+    .from(entrySliderValues)
+    .innerJoin(moodEntries, eq(entrySliderValues.entryId, moodEntries.id))
+    .innerJoin(groups, eq(entrySliderValues.groupId, groups.id))
+    .where(and(eq(moodEntries.userId, userId), isNull(groups.userId)));
+
+  const referencedGroupIds = [...new Set([
+    ...selectionRefs.map((ref) => ref.groupId),
+    ...sliderRefs.map((ref) => ref.groupId),
+  ])];
+  if (referencedGroupIds.length === 0) return;
+
+  const templates = await db
+    .select()
+    .from(groups)
+    .where(and(isNull(groups.userId), inArray(groups.id, referencedGroupIds)))
+    .orderBy(asc(groups.sortOrder), asc(groups.id));
+
+  const groupIdMap = new Map<number, number>();
+  const optionIdMap = new Map<number, number>();
+  for (const template of templates) {
+    const cloned = await cloneGroupForUser(db, userId, template);
+    groupIdMap.set(template.id, cloned.groupId);
+    for (const [oldOptionId, newOptionId] of cloned.optionIdMap) {
+      optionIdMap.set(oldOptionId, newOptionId);
+    }
+  }
+
+  for (const ref of selectionRefs) {
+    const newOptionId = optionIdMap.get(ref.optionId);
+    if (newOptionId !== undefined) {
+      await db.update(entrySelections).set({ optionId: newOptionId }).where(eq(entrySelections.id, ref.selectionId));
+    }
+  }
+
+  for (const ref of sliderRefs) {
+    const newGroupId = groupIdMap.get(ref.groupId);
+    if (newGroupId !== undefined) {
+      await db.update(entrySliderValues).set({ groupId: newGroupId }).where(eq(entrySliderValues.id, ref.sliderValueId));
+    }
+  }
+}
+
 export async function ensureUserGroups(db: Database, userId: number): Promise<void> {
   const existing = await db.query.groups.findFirst({ where: eq(groups.userId, userId), columns: { id: true } });
   if (existing) return;
 
   if (await userHasGlobalGroupReferences(db, userId)) {
-    await db.update(groups).set({ userId }).where(isNull(groups.userId));
-    return;
+    await migrateGlobalGroupReferencesForUser(db, userId);
   }
 
   await cloneDefaultGroupsForUser(db, userId);
@@ -207,10 +283,30 @@ export async function updateGroup(db: Database, userId: number, groupId: number,
   if (fields.slider_max !== undefined) updates.sliderMax = fields.slider_max;
   if (fields.slider_labels !== undefined) updates.sliderLabels = fields.slider_labels;
 
-  validateSliderFields(fields);
-
   if (Object.keys(updates).length === 0) {
     return false;
+  }
+
+  const touchesSliderConfig =
+    fields.type === 'slider' ||
+    fields.slider_min !== undefined ||
+    fields.slider_max !== undefined ||
+    fields.slider_labels !== undefined;
+  if (touchesSliderConfig) {
+    const existing = await db.query.groups.findFirst({
+      where: and(eq(groups.id, groupId), eq(groups.userId, userId)),
+      columns: { type: true, sliderMin: true, sliderMax: true, sliderLabels: true },
+    });
+    if (!existing) return false;
+
+    const nextType = fields.type ?? existing.type;
+    if (nextType === 'slider') {
+      validateSliderFields({
+        slider_min: fields.slider_min ?? existing.sliderMin,
+        slider_max: fields.slider_max ?? existing.sliderMax,
+        slider_labels: fields.slider_labels === undefined ? existing.sliderLabels : fields.slider_labels,
+      });
+    }
   }
 
   const result = await db.update(groups).set(updates).where(and(eq(groups.id, groupId), eq(groups.userId, userId))).returning({ id: groups.id });

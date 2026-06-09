@@ -21,21 +21,7 @@ export const useMoodData = (): UseMoodDataReturn => {
     setError(null);
     try {
       const data = await apiService.getMoodEntries();
-      const entriesWithSelections = await Promise.all(
-        data.map(async (entry) => {
-          try {
-            const [selections, sliderValues] = await Promise.all([
-              apiService.getEntrySelections(entry.id),
-              apiService.getEntrySliderValues(entry.id),
-            ]);
-            return { ...entry, selections, slider_values: sliderValues };
-          } catch (err) {
-            console.error(`Failed to load selections for entry ${entry.id}:`, err);
-            return { ...entry, selections: [], slider_values: [] };
-          }
-        })
-      );
-      setPastEntries(entriesWithSelections);
+      setPastEntries(data);
     } catch (err) {
       console.error('Failed to load history:', err);
       setError('Failed to load mood history');

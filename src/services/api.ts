@@ -2,6 +2,7 @@ import type {
   AppConfig, AuthResponse, Entry, Goal, GoalCompletion, Group, GroupType,
   MoodCreateResponse, MoodUpdateResponse, MoodLog, Selection, SliderValue, Statistics, Achievement,
 } from '../types';
+import type { DaylioImportPayload, DaylioPreparePayload, DaylioPrepareResponse } from '../shared/schemas/import';
 
 function normalizeBaseUrl(raw: string | undefined): string {
   let v = raw ?? '';
@@ -27,7 +28,7 @@ interface RequestOptions extends RequestInit {
 class ApiService {
   private token: string | null = null;
 
-  setAuthToken(token: string): void {
+  setAuthToken(token: string | null): void {
     this.token = token;
   }
 
@@ -49,11 +50,12 @@ class ApiService {
     }
 
     const config: RequestOptions = {
+      ...options,
+      credentials: options.credentials ?? 'include',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      ...options,
     };
 
     if (this.token) {
@@ -107,11 +109,15 @@ class ApiService {
     });
   }
 
-  verifyToken(token: string): Promise<{ user: AuthResponse['user'] }> {
+  verifyToken(token?: string | null): Promise<{ user: AuthResponse['user'] }> {
     return this.request<{ user: AuthResponse['user'] }>('/api/auth/verify', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
     });
+  }
+
+  logout(): Promise<{ status: string }> {
+    return this.request<{ status: string }>('/api/auth/logout', { method: 'POST' });
   }
 
   getMoodEntries(): Promise<Entry[]> {
@@ -354,6 +360,20 @@ class ApiService {
     if (end) params.set('end', end);
     const q = params.toString();
     return this.request<GoalCompletion[]>(`/api/goals/${goalId}/completions${q ? `?${q}` : ''}`);
+  }
+
+  prepareDaylioImport(payload: DaylioPreparePayload): Promise<DaylioPrepareResponse> {
+    return this.request<DaylioPrepareResponse>('/api/import/daylio/prepare', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  importDaylio(payload: DaylioImportPayload): Promise<{ status: string; imported: number; skipped: number }> {
+    return this.request<{ status: string; imported: number; skipped: number }>('/api/import/daylio', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 }
 

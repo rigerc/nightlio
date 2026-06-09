@@ -88,7 +88,11 @@ export interface FitnessDataPoint {
 }
 
 function tokenSecret(env: Pick<Bindings, 'FITNESS_TOKEN_KEY' | 'JWT_SECRET'>): string {
-  return env.FITNESS_TOKEN_KEY || env.JWT_SECRET;
+  const secret = env.FITNESS_TOKEN_KEY || env.JWT_SECRET;
+  if (!secret) {
+    throw new FitnessError('Fitness token encryption key is not configured');
+  }
+  return secret;
 }
 
 function toDataPoint(row: typeof fitnessData.$inferSelect): FitnessDataPoint {

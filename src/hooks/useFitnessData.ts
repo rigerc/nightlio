@@ -12,7 +12,7 @@ export interface UseFitnessDataReturn {
   syncing: boolean;
   error: string | null;
   connect: () => Promise<void>;
-  handleCallback: (code: string) => Promise<void>;
+  handleCallback: (code: string, state: string | null) => Promise<void>;
   sync: (days?: number) => Promise<void>;
   disconnect: () => Promise<void>;
 }
@@ -80,12 +80,19 @@ export const useFitnessData = (enabled: boolean, clientId?: string): UseFitnessD
     }
   }, [fetchStatus]);
 
-  const handleCallback = useCallback(async (code: string) => {
-    if (!clientId) return;
+  const handleCallback = useCallback(async (code: string, state: string | null) => {
+    if (!clientId) throw new Error('Google Health client ID not configured');
     const codeVerifier = sessionStorage.getItem(PKCE_KEY);
     if (!codeVerifier) {
-      setError('Missing PKCE verifier — please try connecting again');
-      return;
+      const message = 'Missing PKCE verifier — please try connecting again';
+      setError(message);
+      throw new Error(message);
+    }
+    const expectedState = sessionStorage.getItem(STATE_KEY);
+    if (!state || !expectedState || state !== expectedState) {
+      const message = 'Google Health sign-in state did not match — please try connecting again';
+      setError(message);
+      throw new Error(message);
     }
     const redirectUri = `${window.location.origin}/dashboard/settings`;
     setLoading(true);
@@ -107,7 +114,9 @@ export const useFitnessData = (enabled: boolean, clientId?: string): UseFitnessD
       await fitnessApi.sync(30);
       await fetchStatus();
     } catch (e) {
-      setError((e as Error).message);
+      const message = (e as Error).message;
+      setError(message);
+      throw e;
     } finally {
       setLoading(false);
       setSyncing(false);

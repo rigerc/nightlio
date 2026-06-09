@@ -1,5 +1,6 @@
 import { verifyToken as verifyClerkToken } from '@clerk/backend';
 import { createMiddleware } from 'hono/factory';
+import { getCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 import { JwtTokenExpired, JwtTokenInvalid } from 'hono/utils/jwt/types';
 import type { AppEnv } from '../lib/env';
@@ -46,11 +47,13 @@ async function tryClerkAuth(c: Parameters<Parameters<typeof createMiddleware<App
 
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   const header = c.req.header('Authorization');
-  if (!header?.startsWith('Bearer ')) {
+  const cookieToken = getCookie(c, 'waymark_token');
+  const token = header?.startsWith('Bearer ')
+    ? header.slice('Bearer '.length).trim()
+    : cookieToken;
+  if (!token) {
     throw new HTTPException(401, { message: 'Authorization header required' });
   }
-
-  const token = header.slice('Bearer '.length).trim();
   try {
     const clerkUserId = await tryClerkAuth(c, token);
     if (clerkUserId !== null) {

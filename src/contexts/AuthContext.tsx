@@ -30,7 +30,7 @@ export const ClerkAuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const logout = useCallback(() => {
-    apiService.setAuthToken('');
+    apiService.setAuthToken(null);
     setUser(null);
     void signOut();
   }, [signOut]);
@@ -38,7 +38,7 @@ export const ClerkAuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
-      apiService.setAuthToken('');
+      apiService.setAuthToken(null);
       setUser(null);
       setLoading(false);
       return;
@@ -55,7 +55,7 @@ export const ClerkAuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMounted) setUser(verified.user);
       } catch (error) {
         console.error('Clerk session verification failed:', error);
-        apiService.setAuthToken('');
+        apiService.setAuthToken(null);
         if (isMounted) setUser(null);
       } finally {
         if (isMounted) setLoading(false);
@@ -84,14 +84,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { config, loading: configLoading } = useConfig();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('waymark_token'));
   const autoSyncFired = useRef(false);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('waymark_token');
-    setToken(null);
     setUser(null);
-    apiService.setAuthToken('');
+    apiService.setAuthToken(null);
+    void apiService.logout().catch(() => {});
   }, []);
 
   const localLogin = useCallback(async (accessKey?: string) => {
@@ -99,12 +97,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const response = await apiService.localLogin(accessKey);
       const { token: jwtToken, user: userData } = response;
-      if (jwtToken) {
-        localStorage.setItem('waymark_token', jwtToken);
-        setToken(jwtToken);
-        setUser(userData);
-        apiService.setAuthToken(jwtToken);
-      }
+      setUser(userData);
+      apiService.setAuthToken(jwtToken ?? null);
       return { success: true };
     } catch (error) {
       return { success: false, error: (error as Error).message || 'Local login failed' };
@@ -114,13 +108,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const verifyToken = useCallback(async () => {
-    if (!token) return;
     try {
-      const userData = await apiService.verifyToken(token);
+      const userData = await apiService.verifyToken();
       setUser(userData.user);
-      apiService.setAuthToken(token);
+      apiService.setAuthToken(null);
     } catch {
-      logout();
+      setUser(null);
+      apiService.setAuthToken(null);
       if (!config.enable_google_oauth && !config.local_login_requires_access_key) {
         await localLogin();
         return;
@@ -128,28 +122,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, config.enable_google_oauth, config.local_login_requires_access_key, logout, localLogin]);
+  }, [config.enable_google_oauth, config.local_login_requires_access_key, localLogin]);
 
   useEffect(() => {
     if (configLoading) return;
-    if (token) {
-      void verifyToken();
-    } else if (!config.enable_google_oauth && !config.local_login_requires_access_key) {
-      void localLogin();
-    } else {
-      setLoading(false);
-    }
-  }, [token, configLoading, config.enable_google_oauth, config.local_login_requires_access_key, verifyToken, localLogin]);
+    void verifyToken();
+  }, [configLoading, verifyToken]);
 
   const login = useCallback(async (googleToken: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
       const response = await apiService.googleAuth(googleToken);
       const { token: jwtToken, user: userData } = response;
-      localStorage.setItem('waymark_token', jwtToken);
-      setToken(jwtToken);
       setUser(userData);
-      apiService.setAuthToken(jwtToken);
+      apiService.setAuthToken(jwtToken ?? null);
       return { success: true };
     } catch (error) {
       return { success: false, error: (error as Error).message };

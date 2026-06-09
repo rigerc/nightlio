@@ -11,6 +11,7 @@ export interface Bindings {
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_HEALTH_CLIENT_ID?: string;
   FITNESS_TOKEN_KEY?: string;
+  ENABLE_LOCAL_LOGIN?: string;
   SELFHOST_USER_NAME?: string;
   SELFHOST_USER_EMAIL?: string;
   SELFHOST_ACCESS_KEY?: string;

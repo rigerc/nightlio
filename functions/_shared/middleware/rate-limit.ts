@@ -5,8 +5,12 @@ import type { AppEnv } from '../lib/env';
 /**
  * Global request cap, mirroring the slowapi Limiter wired up in api/main.py
  * (configured there but not applied per-route). Uses the in-memory store —
- * fine for a self-hosted, low-traffic deployment; swap in a KV/Durable Object
- * store via hono-rate-limiter's `store` option if running multi-region at scale.
+ * fine for a self-hosted, low-traffic deployment.
+ *
+ * NOTE: Cloudflare Workers spawns many ephemeral isolates; each has its own
+ * counter, so the effective cap is (120 * number_of_live_isolates), not a
+ * true global 120 req/min. For a public or high-traffic deployment, back this
+ * with a KV namespace or Durable Object via hono-rate-limiter's `store` option.
  *
  * `rateLimiter()` schedules timers when constructed, which Workers disallow at
  * module-evaluation time ("disallowed operation in global scope") — build it

@@ -5,6 +5,7 @@ import GoalForm from '../components/goals/GoalForm';
 import type { GoalFormRef } from '../components/goals/GoalForm';
 import Skeleton from '../components/ui/Skeleton';
 import apiService from '../services/api';
+import { useToast } from '../components/ui/ToastProvider';
 import type { Goal } from '../types';
 
 interface GoalWithExtra extends Goal {
@@ -28,6 +29,7 @@ const GoalsView = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const formRef = useRef<GoalFormRef>(null);
+  const { show } = useToast();
 
   const getToday = () => {
     const d = new Date();
@@ -74,31 +76,36 @@ const GoalsView = () => {
     const safeFreq = Number.isFinite(freqNum) && freqNum > 0 ? freqNum : 3;
     try {
       const resp = await apiService.createGoal({ title: newGoal.title, description: newGoal.description, frequency: safeFreq });
-      const id = resp?.id ?? Date.now();
-      const goal: GoalWithExtra = { id, title: newGoal.title, description: newGoal.description, frequency: `${safeFreq} days a week`, completed: 0, total: safeFreq, streak: 0, period_start: undefined, last_completed_date: undefined, frequency_per_week: safeFreq, _doneToday: false };
+      const goal: GoalWithExtra = { id: resp.id, title: newGoal.title, description: newGoal.description, frequency: `${safeFreq} days a week`, completed: 0, total: safeFreq, streak: 0, period_start: undefined, last_completed_date: undefined, frequency_per_week: safeFreq, _doneToday: false };
       setGoals(prev => [goal, ...prev]);
-    } catch {
-      const goal: GoalWithExtra = { id: Date.now(), title: newGoal.title, description: newGoal.description, frequency: `${safeFreq} days a week`, completed: 0, total: safeFreq, streak: 0, period_start: undefined, last_completed_date: undefined, frequency_per_week: safeFreq, _doneToday: false };
-      setGoals(prev => [goal, ...prev]);
-    } finally {
       setShowForm(false);
+      show('Goal created', 'success');
+    } catch (error) {
+      show(error instanceof Error ? error.message : 'Could not create goal', 'error');
     }
   };
 
-  const handleDeleteGoal = (goalId: number) => {
+  const handleDeleteGoal = async (goalId: number) => {
+    const previousGoals = goals;
     try { localStorage.removeItem(`goal_done_${goalId}`); } catch { /* ignore */ }
     setGoals(prev => prev.filter(goal => goal.id !== goalId));
-    apiService.deleteGoal(goalId).catch(() => {});
+    try {
+      await apiService.deleteGoal(goalId);
+    } catch (error) {
+      setGoals(previousGoals);
+      throw error instanceof Error ? error : new Error('Could not delete goal');
+    }
   };
 
-  const handleUpdateProgress = (goalId: number) => {
+  const handleUpdateProgress = async (goalId: number) => {
     const today = getToday();
     const target = goals.find(g => g.id === goalId);
     if (!target || target.last_completed_date === today || target._doneToday) return;
     try { localStorage.setItem(`goal_done_${goalId}`, today); } catch { /* ignore */ }
     setGoals(prev => prev.map(g => g.id === goalId ? { ...g, last_completed_date: today, _doneToday: true } : g));
-    apiService.incrementGoalProgress(goalId).then((updated: Goal & { frequency_per_week?: number; already_completed_today?: boolean; last_completed_date?: string } | null) => {
-      if (!updated) return;
+    try {
+      const updated = await apiService.incrementGoalProgress(goalId) as Goal & { frequency_per_week?: number; already_completed_today?: boolean; last_completed_date?: string } | null;
+      if (!updated) throw new Error('Goal not found');
       setGoals(prev => prev.map(g => g.id === goalId ? {
         ...g,
         completed: updated.completed ?? g.completed,
@@ -112,13 +119,14 @@ const GoalsView = () => {
         })(),
         frequency: `${updated.frequency_per_week ?? g.total} days a week`,
       } : g));
-    }).catch(() => {
+    } catch (error) {
       try {
         const existing = localStorage.getItem(`goal_done_${goalId}`);
         if (existing === today) localStorage.removeItem(`goal_done_${goalId}`);
       } catch { /* ignore */ }
       setGoals(prev => prev.map(g => g.id === goalId ? { ...g, last_completed_date: target.last_completed_date, _doneToday: target.last_completed_date === today } : g));
-    });
+      throw error instanceof Error ? error : new Error('Could not update progress');
+    }
   };
 
   if (showForm) {

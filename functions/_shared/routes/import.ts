@@ -5,13 +5,13 @@ import type { AppEnv } from '../lib/env';
 import { createDb } from '../db/client';
 import { daylioImportSchema, daylioPrepareSchema } from '@shared/schemas/import';
 import { importDaylioEntries, prepareDaylioImport } from '../services/import-service';
-import { ValidationError } from '../services/mood-service';
 import { ValidationError as GroupValidationError } from '../services/group-service';
+import { ValidationError as MoodValidationError } from '../services/mood-service';
 
 export const importRoutes = new Hono<AppEnv>();
 
 function isValidationError(err: unknown): err is Error {
-  return err instanceof ValidationError || err instanceof GroupValidationError;
+  return err instanceof MoodValidationError || err instanceof GroupValidationError;
 }
 
 importRoutes.post('/import/daylio/prepare', zValidator('json', daylioPrepareSchema), async (c) => {

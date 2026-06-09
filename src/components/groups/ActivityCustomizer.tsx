@@ -132,6 +132,19 @@ const SliderConfig = ({ group, onUpdate }: { group: Group; onUpdate: (id: number
   const labels = Array.from({ length: max - min + 1 }, (_, i) => group.slider_labels?.[i] ?? '');
   const [minDraft, setMinDraft] = useState(String(min));
   const [maxDraft, setMaxDraft] = useState(String(max));
+  const [labelDrafts, setLabelDrafts] = useState(labels);
+
+  useEffect(() => {
+    setMinDraft(String(min));
+    setMaxDraft(String(max));
+    setLabelDrafts(labels);
+  }, [group.id, group.slider_min, group.slider_max, group.slider_labels]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const commitLabels = () => {
+    if (JSON.stringify(labelDrafts) !== JSON.stringify(labels)) {
+      onUpdate(group.id, { slider_labels: labelDrafts });
+    }
+  };
 
   const commitRange = () => {
     const nMin = parseInt(minDraft, 10);
@@ -139,7 +152,7 @@ const SliderConfig = ({ group, onUpdate }: { group: Group; onUpdate: (id: number
     if (!Number.isFinite(nMin) || !Number.isFinite(nMax) || nMin >= nMax) {
       setMinDraft(String(min)); setMaxDraft(String(max)); return;
     }
-    const nLabels = Array.from({ length: nMax - nMin + 1 }, (_, i) => labels[i] ?? '');
+    const nLabels = Array.from({ length: nMax - nMin + 1 }, (_, i) => labelDrafts[i] ?? '');
     onUpdate(group.id, { slider_min: nMin, slider_max: nMax, slider_labels: nLabels });
   };
 
@@ -169,7 +182,7 @@ const SliderConfig = ({ group, onUpdate }: { group: Group; onUpdate: (id: number
       </div>
       <div className="flex flex-col gap-2.5">
         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Step labels</p>
-        {labels.map((label, i) => (
+        {labelDrafts.map((label, i) => (
           <div key={i} className="flex items-center gap-3">
             <span className="w-5 shrink-0 text-right text-xs font-mono text-[var(--text-muted)]">{min + i}</span>
             <input
@@ -177,9 +190,14 @@ const SliderConfig = ({ group, onUpdate }: { group: Group; onUpdate: (id: number
               placeholder={`Label for ${min + i}…`}
               value={label}
               onChange={e => {
-                const next = [...labels];
+                const next = [...labelDrafts];
                 next[i] = e.target.value;
-                onUpdate(group.id, { slider_labels: next });
+                setLabelDrafts(next);
+              }}
+              onBlur={commitLabels}
+              onKeyDown={e => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') setLabelDrafts(labels);
               }}
               className={cn(inputClass, 'flex-1')}
             />

@@ -10,8 +10,8 @@ interface GoalWithExtra extends Goal {
 
 interface GoalsListProps {
   goals: GoalWithExtra[];
-  onDelete: (id: number) => void;
-  onUpdateProgress: (id: number) => void;
+  onDelete: (id: number) => Promise<void> | void;
+  onUpdateProgress: (id: number) => Promise<void> | void;
   onAdd?: () => void;
 }
 

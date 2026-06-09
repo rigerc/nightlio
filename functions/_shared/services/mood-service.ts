@@ -96,14 +96,30 @@ async function assertUserOwnedEntryFields(
     }
   }
 
-  const groupIds = [...new Set(Object.keys(sliderValues).map(Number).filter(Number.isFinite))];
+  const sliderEntries = Object.entries(sliderValues)
+    .map(([groupId, value]) => ({ groupId: Number(groupId), value }))
+    .filter(({ groupId }) => Number.isFinite(groupId));
+  const groupIds = [...new Set(sliderEntries.map(({ groupId }) => groupId))];
   if (groupIds.length > 0) {
     const rows = await db
-      .select({ id: groups.id })
+      .select({ id: groups.id, type: groups.type, sliderMin: groups.sliderMin, sliderMax: groups.sliderMax })
       .from(groups)
       .where(and(eq(groups.userId, userId), inArray(groups.id, groupIds)));
     if (rows.length !== groupIds.length) {
       throw new ValidationError('One or more sliders are not available for this user');
+    }
+
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    for (const { groupId, value } of sliderEntries) {
+      const group = byId.get(groupId);
+      if (!group || group.type !== 'slider') {
+        throw new ValidationError('One or more slider values reference a non-slider group');
+      }
+      const min = group.sliderMin ?? 1;
+      const max = group.sliderMax ?? 5;
+      if (value < min || value > max) {
+        throw new ValidationError(`Slider value for group ${groupId} must be between ${min} and ${max}`);
+      }
     }
   }
 }

@@ -160,6 +160,6 @@ export interface MoodUpdateResponse {
 }
 
 export interface AuthResponse {
-  token: string;
+  token?: string;
   user: User;
 }

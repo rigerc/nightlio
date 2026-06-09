@@ -28,7 +28,7 @@ interface RequestOptions extends RequestInit {
 class ApiService {
   private token: string | null = null;
 
-  setAuthToken(token: string): void {
+  setAuthToken(token: string | null): void {
     this.token = token;
   }
 
@@ -50,11 +50,12 @@ class ApiService {
     }
 
     const config: RequestOptions = {
+      ...options,
+      credentials: options.credentials ?? 'include',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      ...options,
     };
 
     if (this.token) {
@@ -108,11 +109,15 @@ class ApiService {
     });
   }
 
-  verifyToken(token: string): Promise<{ user: AuthResponse['user'] }> {
+  verifyToken(token?: string | null): Promise<{ user: AuthResponse['user'] }> {
     return this.request<{ user: AuthResponse['user'] }>('/api/auth/verify', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
     });
+  }
+
+  logout(): Promise<{ status: string }> {
+    return this.request<{ status: string }>('/api/auth/logout', { method: 'POST' });
   }
 
   getMoodEntries(): Promise<Entry[]> {

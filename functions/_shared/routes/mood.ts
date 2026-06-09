@@ -66,7 +66,17 @@ moodRoutes.get('/moods', zValidator('query', moodQuerySchema), async (c) => {
       ? await getEntriesByDateRange(db, userId, startDate, endDate)
       : await getAllEntries(db, userId);
 
-  return c.json(entries);
+  const hydratedEntries = await Promise.all(
+    entries.map(async (entry) => {
+      const [selections, sliderValues] = await Promise.all([
+        getEntrySelections(db, entry.id),
+        getEntrySliderValues(db, entry.id),
+      ]);
+      return { ...entry, selections, slider_values: sliderValues };
+    })
+  );
+
+  return c.json(hydratedEntries);
 });
 
 moodRoutes.get('/mood/:entry_id', zValidator('param', entryIdParamSchema), async (c) => {

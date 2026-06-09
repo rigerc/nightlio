@@ -1,5 +1,7 @@
 import { verifyToken as verifyClerkToken } from '@clerk/backend';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { HTTPException } from 'hono/http-exception';
 import { JwtTokenExpired, JwtTokenInvalid } from 'hono/utils/jwt/types';
@@ -56,6 +58,20 @@ function isLocalRequest(url: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 }
 
+function setAuthCookie(c: Context<AppEnv>, token: string): void {
+  setCookie(c, 'waymark_token', token, {
+    httpOnly: true,
+    sameSite: 'Lax',
+    secure: !isLocalRequest(c.req.url),
+    path: '/',
+    maxAge: jwtExpiresInSeconds(c.env),
+  });
+}
+
+function clearAuthCookie(c: Context<AppEnv>): void {
+  deleteCookie(c, 'waymark_token', { path: '/' });
+}
+
 function constantTimeEqual(a: string, b: string): boolean {
   const encoder = new TextEncoder();
   const aBytes = encoder.encode(a);
@@ -99,15 +115,19 @@ authRoutes.post('/auth/google', zValidator('json', googleAuthRequestSchema), asy
   }
 
   const authToken = await generateToken(user.id, c.env.JWT_SECRET, jwtExpiresInSeconds(c.env));
+  setAuthCookie(c, authToken);
   return c.json({ token: authToken, user: toUserOut(user) });
 });
 
 authRoutes.post('/auth/verify', async (c) => {
   const header = c.req.header('Authorization');
-  if (!header?.startsWith('Bearer ')) {
+  const cookieToken = getCookie(c, 'waymark_token');
+  const token = header?.startsWith('Bearer ')
+    ? header.slice('Bearer '.length).trim()
+    : cookieToken;
+  if (!token) {
     throw new HTTPException(401, { message: 'Authorization header required' });
   }
-  const token = header.slice('Bearer '.length).trim();
 
   try {
     const db = createDb(c.env.DB);
@@ -178,5 +198,11 @@ authRoutes.post('/auth/local/login', async (c) => {
   }
 
   const authToken = await generateToken(user.id, c.env.JWT_SECRET, jwtExpiresInSeconds(c.env));
+  setAuthCookie(c, authToken);
   return c.json({ token: authToken, user: toUserOut(user) });
+});
+
+authRoutes.post('/auth/logout', (c) => {
+  clearAuthCookie(c);
+  return c.json({ status: 'ok' });
 });

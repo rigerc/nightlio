@@ -13,8 +13,8 @@ interface GoalWithExtra extends Goal {
 
 interface GoalCardProps {
   goal: GoalWithExtra;
-  onDelete: (id: number) => void;
-  onUpdateProgress: (id: number) => void;
+  onDelete: (id: number) => Promise<void> | void;
+  onUpdateProgress: (id: number) => Promise<void> | void;
 }
 
 const GoalCard = ({ goal, onDelete, onUpdateProgress }: GoalCardProps) => {
@@ -26,9 +26,14 @@ const GoalCard = ({ goal, onDelete, onUpdateProgress }: GoalCardProps) => {
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this goal?')) return;
     setIsDeleting(true);
-    onDelete(goal.id);
-    show('Goal deleted successfully', 'success');
-    setIsDeleting(false);
+    try {
+      await onDelete(goal.id);
+      show('Goal deleted successfully', 'success');
+    } catch (error) {
+      show(error instanceof Error ? error.message : 'Could not delete goal', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleMarkComplete = () => {
@@ -51,8 +56,9 @@ const GoalCard = ({ goal, onDelete, onUpdateProgress }: GoalCardProps) => {
       show('Goal already completed for this period!', 'info');
       return;
     }
-    onUpdateProgress(goal.id);
-    show('Progress updated!', 'success');
+    void Promise.resolve(onUpdateProgress(goal.id))
+      .then(() => show('Progress updated!', 'success'))
+      .catch((error: Error) => show(error.message || 'Could not update progress', 'error'));
   };
 
   const progressPercentage = goal.total > 0 ? (goal.completed / goal.total) * 100 : 0;

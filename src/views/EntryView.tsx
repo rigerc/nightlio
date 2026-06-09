@@ -28,19 +28,21 @@ import { useBurner } from '../contexts/BurnerContext';
 import type { MoodValue, Entry, Group, Selection, SliderValue, MoodCreateResponse, MoodUpdateResponse } from '../types';
 
 const DEFAULT_MARKDOWN = '';
-const dateToInputValue = (displayDate: string): string => {
-  const d = new Date(displayDate);
-  if (isNaN(d.getTime())) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+const toDateKey = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 };
 
-const inputValueToDisplayDate = (isoDate: string): string => {
-  const [y, mo, d] = isoDate.split('-').map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString();
+const dateToInputValue = (displayDate: string): string => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(displayDate)) return displayDate;
+  const d = new Date(displayDate);
+  if (isNaN(d.getTime())) return '';
+  return toDateKey(d);
 };
+
+const inputValueToDisplayDate = (isoDate: string): string => isoDate;
 const AUTOSAVE_DEBOUNCE_MS = 1200;
 
 type SaveState = 'idle' | 'saving' | 'dirty' | 'error' | 'saved' | 'disabled';
@@ -202,7 +204,7 @@ const EntryView = ({
         content: payload.content,
         selected_options: payload.selected_options,
         slider_values: payload.slider_values,
-        date: now.toLocaleDateString(),
+        date: toDateKey(now),
         time: now.toISOString(),
         is_important: payload.is_important,
         important_reason: payload.important_reason,
@@ -231,7 +233,7 @@ const EntryView = ({
               id: newEntryId,
               mood: payload.mood as MoodValue | undefined,
               content: payload.content,
-              date: now.toLocaleDateString(),
+              date: toDateKey(now),
               created_at: now.toISOString(),
               selections: normalizeSelectedOptions(payload.selected_options).map((id) => ({ id } as Selection)),
               slider_values: normalizeSliderValues(payload.slider_values).map(([gId, val]) => ({ group_id: gId, value: val } as SliderValue)),
@@ -524,16 +526,21 @@ const EntryView = ({
     onBack();
   };
 
-  const handleSaveAndClose = useCallback(() => {
+  const handleSaveAndClose = useCallback(async () => {
     clearAutosaveTimer();
     skipAutosaveFlushRef.current = true;
 
     const latest = latestPayloadRef.current;
-    if (latest && latest.snapshot !== lastSavedSnapshotRef.current && !saveMutation.isPending) {
-      saveMutation.mutate({ payload: latest.payload, snapshot: latest.snapshot, entryId: activeEntryIdRef.current });
+    try {
+      if (latest && latest.snapshot !== lastSavedSnapshotRef.current && !saveMutation.isPending) {
+        await saveMutation.mutateAsync({ payload: latest.payload, snapshot: latest.snapshot, entryId: activeEntryIdRef.current });
+      }
+      onEntrySaved();
+    } catch (error) {
+      skipAutosaveFlushRef.current = false;
+      setSaveState('error');
+      setSaveErrorMessage(error instanceof Error ? error.message : 'Save failed. Please try again.');
     }
-
-    onEntrySaved();
   }, [clearAutosaveTimer, saveMutation, onEntrySaved]);
 
   const handleRetryAutosave = useCallback(() => {

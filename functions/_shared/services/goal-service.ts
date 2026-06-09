@@ -126,7 +126,11 @@ export async function updateGoal(db: Database, userId: number, goalId: number, i
   const updates: Record<string, unknown> = {};
 
   if (input.title !== undefined) {
-    updates.title = input.title.trim();
+    const title = input.title.trim();
+    if (!title) {
+      throw new ValidationError('Title is required and cannot be empty');
+    }
+    updates.title = title;
   }
   if (input.description !== undefined) {
     updates.description = input.description.trim();

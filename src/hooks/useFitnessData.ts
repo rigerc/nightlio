@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { generatePkce, randomState, buildAuthorizationUrl, exchangeCode, GOOGLE_HEALTH_SCOPES } from 'googlehealth';
+import { useState, useCallback } from 'react';
+import { Platform } from 'react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as fitnessService from '../services/fitnessService';
 import type { FitnessConnection } from '../types';
-import { fitnessApi } from '../services/fitnessApi';
 
-const PKCE_KEY = 'fitness_cv';
-const STATE_KEY = 'fitness_state';
+export const FITNESS_QUERY_KEY = ['fitness', 'status'] as const;
 
 export interface UseFitnessDataReturn {
   connection: FitnessConnection | null;
@@ -12,126 +12,69 @@ export interface UseFitnessDataReturn {
   syncing: boolean;
   error: string | null;
   connect: () => Promise<void>;
-  handleCallback: (code: string, state: string | null) => Promise<void>;
   sync: (days?: number) => Promise<void>;
   disconnect: () => Promise<void>;
 }
 
-export const useFitnessData = (enabled: boolean, clientId?: string): UseFitnessDataReturn => {
-  const [connection, setConnection] = useState<FitnessConnection | null>(null);
-  const [loading, setLoading] = useState(false);
+export const useFitnessData = (enabled = true): UseFitnessDataReturn => {
+  const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStatus = useCallback(async () => {
-    if (!enabled) return;
-    setLoading(true);
-    try {
-      const status = await fitnessApi.getStatus();
-      setConnection(status);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled]);
+  const { data: connection = null, isLoading } = useQuery({
+    queryKey: FITNESS_QUERY_KEY,
+    queryFn: fitnessService.getFitnessStatus,
+    enabled: enabled && Platform.OS === 'android',
+    select: (data): FitnessConnection => ({
+      connected: data.connected,
+      provider: data.provider,
+      last_synced_at: data.last_synced_at,
+    }),
+  });
 
-  useEffect(() => {
-    void fetchStatus();
-  }, [fetchStatus]);
+  const connectMutation = useMutation({
+    mutationFn: fitnessService.connectHealthConnect,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: FITNESS_QUERY_KEY }),
+    onError: (err) => setError((err as Error).message),
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: fitnessService.disconnectHealthConnect,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: FITNESS_QUERY_KEY }),
+    onError: (err) => setError((err as Error).message),
+  });
 
   const connect = useCallback(async () => {
-    if (!clientId) {
-      setError('Google Health client ID not configured');
-      return;
-    }
     setError(null);
-    const { codeVerifier, codeChallenge, codeChallengeMethod } = await generatePkce();
-    const state = randomState();
-    sessionStorage.setItem(PKCE_KEY, codeVerifier);
-    sessionStorage.setItem(STATE_KEY, state);
-    const redirectUri = `${window.location.origin}/dashboard/settings`;
-    const url = buildAuthorizationUrl({
-      clientId,
-      redirectUri,
-      scopes: [
-        GOOGLE_HEALTH_SCOPES.activityAndFitnessReadonly,
-        GOOGLE_HEALTH_SCOPES.sleepReadonly,
-        GOOGLE_HEALTH_SCOPES.healthMetricsReadonly,
-      ],
-      state,
-      codeChallenge,
-      codeChallengeMethod,
-      accessType: 'offline',
-    });
-    window.location.href = url;
-  }, [clientId]);
+    const granted = await connectMutation.mutateAsync();
+    if (!granted) setError('Health Connect permissions were denied');
+  }, [connectMutation]);
 
   const sync = useCallback(async (days = 30) => {
     setSyncing(true);
     setError(null);
     try {
-      await fitnessApi.sync(days);
-      await fetchStatus();
+      await fitnessService.syncFitnessData(days);
+      await queryClient.invalidateQueries({ queryKey: FITNESS_QUERY_KEY });
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setSyncing(false);
     }
-  }, [fetchStatus]);
-
-  const handleCallback = useCallback(async (code: string, state: string | null) => {
-    if (!clientId) throw new Error('Google Health client ID not configured');
-    const codeVerifier = sessionStorage.getItem(PKCE_KEY);
-    if (!codeVerifier) {
-      const message = 'Missing PKCE verifier — please try connecting again';
-      setError(message);
-      throw new Error(message);
-    }
-    const expectedState = sessionStorage.getItem(STATE_KEY);
-    if (!state || !expectedState || state !== expectedState) {
-      const message = 'Google Health sign-in state did not match — please try connecting again';
-      setError(message);
-      throw new Error(message);
-    }
-    const redirectUri = `${window.location.origin}/dashboard/settings`;
-    setLoading(true);
-    setError(null);
-    try {
-      const tokens = await exchangeCode({ clientId, code, redirectUri, codeVerifier });
-      sessionStorage.removeItem(PKCE_KEY);
-      sessionStorage.removeItem(STATE_KEY);
-      await fitnessApi.storeTokens({
-        provider: 'google_health',
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken,
-        expires_in: tokens.expiresAt
-          ? Math.round((tokens.expiresAt - Date.now()) / 1000)
-          : undefined,
-      });
-      await fetchStatus();
-      setSyncing(true);
-      await fitnessApi.sync(30);
-      await fetchStatus();
-    } catch (e) {
-      const message = (e as Error).message;
-      setError(message);
-      throw e;
-    } finally {
-      setLoading(false);
-      setSyncing(false);
-    }
-  }, [clientId, fetchStatus]);
+  }, [queryClient]);
 
   const disconnect = useCallback(async () => {
     setError(null);
-    try {
-      await fitnessApi.disconnect();
-      setConnection(null);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }, []);
+    await disconnectMutation.mutateAsync();
+  }, [disconnectMutation]);
 
-  return { connection, loading, syncing, error, connect, handleCallback, sync, disconnect };
+  return {
+    connection,
+    loading: isLoading,
+    syncing,
+    error,
+    connect,
+    sync,
+    disconnect,
+  };
 };

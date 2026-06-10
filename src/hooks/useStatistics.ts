@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import apiService from '../services/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getStatistics } from '../services/moodService';
 import type { Statistics } from '../types';
+
+export const STATISTICS_QUERY_KEY = ['statistics'] as const;
 
 export interface UseStatisticsReturn {
   statistics: Statistics | null;
@@ -12,38 +14,29 @@ export interface UseStatisticsReturn {
 }
 
 export const useStatistics = (): UseStatisticsReturn => {
-  const [statistics, setStatistics] = useState<Statistics | null>(null);
-  const [currentStreak, setCurrentStreak] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const loadStatistics = useCallback(async (): Promise<void> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiService.getStatistics();
-      setStatistics(data);
-    } catch (err) {
-      console.error('Failed to load statistics:', err);
-      setError('Failed to load statistics');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading, error } = useQuery({
+    queryKey: STATISTICS_QUERY_KEY,
+    queryFn: getStatistics,
+  });
 
-  const loadStreak = useCallback(async (): Promise<void> => {
-    try {
-      const data = await apiService.getCurrentStreak();
-      setCurrentStreak(data.current_streak);
-    } catch (err) {
-      console.error('Failed to load streak:', err);
-      setCurrentStreak(0);
-    }
-  }, []);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: STATISTICS_QUERY_KEY });
 
-  useEffect(() => {
-    void loadStreak();
-  }, [loadStreak]);
+  const statistics: Statistics | null = data
+    ? {
+        statistics: data.statistics,
+        mood_distribution: data.mood_distribution,
+        current_streak: data.current_streak,
+      }
+    : null;
 
-  return { statistics, currentStreak, loading, error, loadStatistics, refreshStreak: loadStreak };
+  return {
+    statistics,
+    currentStreak: data?.current_streak ?? 0,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    loadStatistics: refresh,
+    refreshStreak: refresh,
+  };
 };

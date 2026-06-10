@@ -1,63 +1,49 @@
-import type { Entry, Group } from '../../types';
-import HistoryEntry from './HistoryEntry';
-import Skeleton from '../ui/Skeleton';
+import { FlatList, View, Text, ActivityIndicator } from 'react-native';
+import { HistoryEntry } from './HistoryEntry';
+import type { Entry } from '../../types';
 
 interface HistoryListProps {
   entries: Entry[];
   loading: boolean;
   error: string | null;
-  onDelete: (id: number) => void;
-  onEdit?: (entry: Entry) => void;
-  groups?: Group[];
+  onEntryPress?: (entry: Entry) => void;
 }
 
-const HistoryList = ({ entries, loading, error, onDelete, onEdit, groups = [] }: HistoryListProps) => {
+export function HistoryList({ entries, loading, error, onEntryPress }: HistoryListProps) {
   if (loading) {
     return (
-      <div style={{ textAlign: 'left', padding: '1rem 0' }}>
-        <Skeleton height={28} width={220} style={{ marginBottom: 12 }} />
-        <div className="card-grid">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i}><Skeleton height={220} radius={16} /></div>
-          ))}
-        </div>
-      </div>
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" />
+      </View>
     );
   }
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', color: 'var(--accent-600)', padding: '2rem' }}>
-        {error}
-      </div>
+      <View className="flex-1 items-center justify-center p-8">
+        <Text className="text-destructive text-center">{error}</Text>
+      </View>
     );
   }
 
   if (entries.length === 0) {
     return (
-      <div style={{ textAlign: 'left', marginTop: '1rem', padding: '0.5rem 0' }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>
-          Pick a mood above to write your first entry.
-        </p>
-      </div>
+      <View className="flex-1 items-center justify-center p-8">
+        <Text className="text-muted-foreground text-center">
+          No entries yet. Tap + to write your first entry.
+        </Text>
+      </View>
     );
   }
 
   return (
-    <div style={{ textAlign: 'left', marginTop: 0 }}>
-      <div className="card-grid">
-        {entries.map(entry => (
-          <HistoryEntry
-            key={entry.id}
-            entry={entry}
-            onDelete={onDelete}
-            onEdit={onEdit}
-            groups={groups}
-          />
-        ))}
-      </div>
-    </div>
+    <FlatList
+      data={entries}
+      keyExtractor={(item) => String(item.id)}
+      renderItem={({ item }) => (
+        <HistoryEntry entry={item} onPress={onEntryPress ? () => onEntryPress(item) : undefined} />
+      )}
+      contentContainerStyle={{ paddingTop: 8, paddingBottom: 80 }}
+    />
   );
-};
-
-export default HistoryList;
+}

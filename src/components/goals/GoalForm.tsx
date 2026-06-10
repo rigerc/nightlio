@@ -1,198 +1,117 @@
-import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
-import { ArrowLeft, Calendar, Info } from 'lucide-react';
-
-interface GoalFormData {
-  title: string;
-  description: string;
-  frequency: string;
-}
-
-export interface GoalFormRef {
-  prefill: (title: string, description: string) => void;
-}
+import { useState } from 'react';
+import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView } from 'react-native';
 
 interface GoalFormProps {
-  onSubmit: (data: GoalFormData) => Promise<void>;
+  onSubmit: (data: { title: string; description: string; frequency_per_week: number }) => Promise<void>;
   onCancel: () => void;
-  showInlineSuggestions?: boolean;
 }
 
-type FormErrors = Partial<Record<'title' | 'description', string>>;
+const SUGGESTIONS = [
+  { title: 'Morning Meditation', description: '10 minutes of mindfulness' },
+  { title: 'Evening Walk', description: '30-minute walk outside' },
+  { title: 'Read Before Bed', description: 'Read for 20 minutes' },
+];
 
-const GoalForm = forwardRef<GoalFormRef, GoalFormProps>(({ onSubmit, onCancel, showInlineSuggestions = true }, ref) => {
-  const [formData, setFormData] = useState({ title: '', description: '', frequencyNumber: 3 });
-  const [errors, setErrors] = useState<FormErrors>({});
+export function GoalForm({ onSubmit, onCancel }: GoalFormProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [frequency, setFrequency] = useState(3);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const titleMax = 80;
-  const descMax = 280;
-  const titleLen = formData.title.length;
-  const descLen = formData.description.length;
-  const freqLabel = useMemo(() => `${formData.frequencyNumber} ${formData.frequencyNumber === 1 ? 'day' : 'days'} a week`, [formData.frequencyNumber]);
-
-  const handleInputChange = (field: keyof typeof formData, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-    if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.description.trim()) newErrors.description = 'Description is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm() || submitting) return;
+  const handleSubmit = async () => {
+    if (!title.trim()) { setError('Title is required'); return; }
+    setError(null);
     setSubmitting(true);
     try {
-      await onSubmit({ title: formData.title.trim(), description: formData.description.trim(), frequency: freqLabel });
+      await onSubmit({ title: title.trim(), description: description.trim(), frequency_per_week: frequency });
     } finally {
       setSubmitting(false);
     }
   };
 
-  useImperativeHandle(ref, () => ({
-    prefill: (title: string, description: string) => {
-      setFormData(prev => ({ ...prev, title, description }));
-    },
-  }));
-
-  const btnBase: React.CSSProperties = { background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', padding: '8px 12px', borderRadius: '8px', fontSize: '0.95rem' };
-
   return (
-    <div style={{ maxWidth: '600px' }}>
-      <button
-        onClick={onCancel}
-        style={btnBase}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-bg-softer)'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-      >
-        <ArrowLeft size={16} /> Back to Goals
-      </button>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <Text className="text-2xl font-bold text-foreground mb-6">New Goal</Text>
 
-      <form onSubmit={(e) => void handleSubmit(e)}>
-        <div style={{ marginBottom: '24px' }}>
-          <label htmlFor="goal-title" style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--text)', fontSize: '0.95rem' }}>
-            Goal Title *
-          </label>
-          <input
-            type="text"
-            id="goal-title"
-            value={formData.title}
-            onChange={(e) => handleInputChange('title', e.target.value)}
-            placeholder="e.g., Morning Meditation, Evening Walk, Read Before Bed"
-            style={{ width: '100%', padding: '12px 16px', border: `1px solid ${errors.title ? 'var(--error)' : 'var(--border)'}`, borderRadius: '8px', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s' }}
-            autoFocus
-            maxLength={titleMax}
-            onFocus={(e) => { if (!errors.title) e.target.style.borderColor = 'var(--accent-600)'; }}
-            onBlur={(e) => { if (!errors.title) e.target.style.borderColor = 'var(--border)'; }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-            {errors.title
-              ? <div style={{ color: 'var(--error)', fontSize: '0.85rem' }}>{errors.title}</div>
-              : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Make it clear and specific</span>}
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{titleLen}/{titleMax}</span>
-          </div>
-        </div>
+      {/* Title */}
+      <Text className="text-sm font-semibold text-muted-foreground mb-1">Title *</Text>
+      <TextInput
+        value={title}
+        onChangeText={(t) => { setTitle(t); setError(null); }}
+        placeholder="e.g., Morning Meditation"
+        placeholderTextColor="#6b7280"
+        className={`bg-card border rounded-xl px-4 py-3 text-foreground mb-1 ${error ? 'border-destructive' : 'border-border'}`}
+        maxLength={80}
+      />
+      {error ? <Text className="text-destructive text-xs mb-3">{error}</Text> : <View className="mb-3" />}
 
-        <div style={{ marginBottom: '24px' }}>
-          <label htmlFor="goal-desc" style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--text)', fontSize: '0.95rem' }}>
-            Description *
-          </label>
-          <textarea
-            id="goal-desc"
-            value={formData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
-            placeholder="Describe your goal and why it's important to you..."
-            rows={4}
-            style={{ width: '100%', padding: '12px 16px', border: `1px solid ${errors.description ? 'var(--error)' : 'var(--border)'}`, borderRadius: '8px', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', fontFamily: 'inherit', outline: 'none', resize: 'vertical', minHeight: '100px', transition: 'border-color 0.2s' }}
-            maxLength={descMax}
-            onFocus={(e) => { if (!errors.description) e.target.style.borderColor = 'var(--accent-600)'; }}
-            onBlur={(e) => { if (!errors.description) e.target.style.borderColor = 'var(--border)'; }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-            {errors.description
-              ? <div style={{ color: 'var(--error)', fontSize: '0.85rem' }}>{errors.description}</div>
-              : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Add a short motivation to keep you accountable</span>}
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{descLen}/{descMax}</span>
-          </div>
-        </div>
+      {/* Description */}
+      <Text className="text-sm font-semibold text-muted-foreground mb-1">Description</Text>
+      <TextInput
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Why is this goal important to you?"
+        placeholderTextColor="#6b7280"
+        multiline
+        numberOfLines={3}
+        className="bg-card border border-border rounded-xl px-4 py-3 text-foreground mb-4"
+        style={{ textAlignVertical: 'top', minHeight: 80 }}
+        maxLength={280}
+      />
 
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <label style={{ fontWeight: 500, color: 'var(--text)', fontSize: '0.95rem' }}>Frequency</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              <Calendar size={14} /><span>{freqLabel}</span>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
-            {Array.from({ length: 7 }, (_, i) => i + 1).map(n => {
-              const active = formData.frequencyNumber === n;
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => handleInputChange('frequencyNumber', n)}
-                  aria-pressed={active}
-                  style={{ padding: '10px 0', borderRadius: 8, border: `1px solid ${active ? 'color-mix(in oklab, var(--accent-600), transparent 30%)' : 'var(--border)'}`, background: active ? 'var(--accent-600)' : 'var(--surface)', color: active ? 'white' : 'var(--text)', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  {n}
-                </button>
-              );
-            })}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <Info size={14} /><span>This sets your weekly target. You can mark progress daily.</span>
-          </div>
-        </div>
-
-        {showInlineSuggestions && (
-          <div style={{ marginBottom: '28px' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 8 }}>Quick suggestions</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {[{ t: 'Morning Meditation', d: '10 minutes of mindfulness' }, { t: 'Evening Walk', d: '30-minute walk outside' }, { t: 'Read Before Bed', d: 'Read 20 minutes' }].map((s) => (
-                <button
-                  key={s.t}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, title: s.t, description: s.d }))}
-                  style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontSize: '0.85rem' }}
-                >
-                  {s.t}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{ flex: 1, padding: '12px 24px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--surface)', color: 'var(--text)', fontSize: '1rem', cursor: 'pointer', transition: 'background-color 0.2s' }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-bg-softer)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface)'; }}
+      {/* Frequency */}
+      <Text className="text-sm font-semibold text-muted-foreground mb-2">
+        Frequency — {frequency}x per week
+      </Text>
+      <View className="flex-row gap-2 mb-4">
+        {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+          <Pressable
+            key={n}
+            onPress={() => setFrequency(n)}
+            className={`flex-1 py-2.5 rounded-lg items-center border ${
+              frequency === n ? 'bg-primary border-primary' : 'bg-card border-border'
+            }`}
           >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="primary"
-            style={{ flex: 1, padding: '12px 24px', fontSize: '1rem', opacity: submitting ? 0.8 : 1, cursor: submitting ? 'default' : 'pointer' }}
-            disabled={submitting}
+            <Text className={`font-bold ${frequency === n ? 'text-white' : 'text-foreground'}`}>{n}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Suggestions */}
+      <Text className="text-xs text-muted-foreground mb-2">Quick suggestions</Text>
+      <View className="flex-row flex-wrap gap-2 mb-6">
+        {SUGGESTIONS.map((s) => (
+          <Pressable
+            key={s.title}
+            onPress={() => { setTitle(s.title); setDescription(s.description); }}
+            className="px-3 py-1.5 rounded-full border border-border bg-card"
           >
-            {submitting ? 'Creating…' : 'Create Goal'}
-          </button>
-        </div>
-      </form>
-    </div>
+            <Text className="text-sm text-foreground">{s.title}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Actions */}
+      <View className="flex-row gap-3">
+        <Pressable
+          onPress={onCancel}
+          className="flex-1 py-3 rounded-xl border border-border items-center"
+        >
+          <Text className="text-foreground font-semibold">Cancel</Text>
+        </Pressable>
+        <Pressable
+          onPress={handleSubmit}
+          disabled={submitting}
+          className="flex-1 py-3 rounded-xl bg-primary items-center"
+        >
+          {submitting ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text className="text-white font-semibold">Create Goal</Text>
+          )}
+        </Pressable>
+      </View>
+    </ScrollView>
   );
-});
-
-GoalForm.displayName = 'GoalForm';
-
-export default GoalForm;
+}

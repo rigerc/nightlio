@@ -1,14 +1,8 @@
-import { Frown, Meh, Smile, Heart } from 'lucide-react';
-import type { ComponentType } from 'react';
-import type { LucideProps } from 'lucide-react';
-import { getMoodIcon } from '../../utils/moodUtils';
+import { getMoodColor } from '../../utils/moodUtils';
 import type { Entry, MoodValue } from '../../types';
-
-type IconComponent = ComponentType<LucideProps>;
 
 export interface MoodLegendEntry {
   value: number;
-  icon: IconComponent;
   color: string;
   label: string;
   shorthand: string;
@@ -18,8 +12,7 @@ export interface CalendarDay {
   key: string;
   label: number;
   entry: Entry | undefined;
-  IconComponent: IconComponent | null;
-  iconColor: string | null;
+  moodColor: string | null;
   isCurrentMonth: boolean;
   isToday: boolean;
 }
@@ -31,8 +24,6 @@ export interface OverviewCard {
   helperText?: string;
 }
 
-// Minimum days of recent data before we'll venture a "compared to your usual" framing —
-// a couple of entries shouldn't be presented as a meaningful trend (see guideline #13).
 export const MIN_DAYS_FOR_BASELINE_COMPARISON = 7;
 const BASELINE_COMPARISON_MARGIN = 0.3;
 
@@ -79,18 +70,9 @@ export interface MoodDistributionDatum {
 
 export const RANGE_OPTIONS: readonly number[] = Object.freeze([7, 30, 90]);
 
-export const TOOLTIP_STYLE = Object.freeze({
-  backgroundColor: 'var(--bg-card)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
-  boxShadow: 'var(--shadow-md)',
-});
-
 export const DEFAULT_METRICS = Object.freeze({ total_entries: 0, average_mood: 0 });
 export const EMPTY_OBJECT: Record<string, number> = Object.freeze({});
 
-// Early signal vs. an established pattern worth acting on — both are shown, but
-// labeled with their confidence so users don't mistake a handful of logs for a trend.
 export const MIN_TAG_OCCURRENCES = 5;
 export const RELIABLE_TAG_OCCURRENCES = 14;
 
@@ -98,11 +80,11 @@ export const tagConfidenceFor = (count: number): TagConfidence =>
   count >= RELIABLE_TAG_OCCURRENCES ? 'high' : count >= MIN_TAG_OCCURRENCES ? 'medium' : 'low';
 
 export const MOOD_LEGEND: readonly MoodLegendEntry[] = Object.freeze([
-  { value: 1, icon: Frown, color: 'var(--mood-1)', label: 'Terrible', shorthand: 'T' },
-  { value: 2, icon: Frown, color: 'var(--mood-2)', label: 'Bad', shorthand: 'B' },
-  { value: 3, icon: Meh, color: 'var(--mood-3)', label: 'Okay', shorthand: 'O' },
-  { value: 4, icon: Smile, color: 'var(--mood-4)', label: 'Good', shorthand: 'G' },
-  { value: 5, icon: Heart, color: 'var(--mood-5)', label: 'Amazing', shorthand: 'A' },
+  { value: 1, color: getMoodColor(1), label: 'Terrible', shorthand: 'T' },
+  { value: 2, color: getMoodColor(2), label: 'Bad', shorthand: 'B' },
+  { value: 3, color: getMoodColor(3), label: 'Okay', shorthand: 'O' },
+  { value: 4, color: getMoodColor(4), label: 'Good', shorthand: 'G' },
+  { value: 5, color: getMoodColor(5), label: 'Amazing', shorthand: 'A' },
 ]);
 
 export const MOOD_FULL_LABELS: Record<number, string> = MOOD_LEGEND.reduce<Record<number, string>>(
@@ -117,25 +99,7 @@ export const MOOD_SHORTHANDS: Record<number, string> = MOOD_LEGEND.reduce<Record
 
 export const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export const formatTrendTooltip = (
-  value: number | null | undefined,
-  _name: string,
-  props?: { dataKey?: string },
-): [string, string] => {
-  if (props?.dataKey === 'ma') {
-    if (value == null || Number.isNaN(value)) return ['No data', 'Moving Avg'];
-    return [Number(value).toFixed(2), 'Moving Avg'];
-  }
-  if (value == null) return ['No entry', 'Mood'];
-  return [MOOD_FULL_LABELS[value] ?? '', 'Mood'];
-};
-
-export const normalizeDateKey = (date: string | Date | null | undefined): string | null => {
-  if (!date) return null;
-  const instance = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(instance.getTime())) return null;
-  return instance.toLocaleDateString();
-};
+export const DEFAULT_METRICS_OBJ = Object.freeze({ total_entries: 0, average_mood: 0 });
 
 export const buildMoodDistributionData = (
   moodDistribution: Record<string, number> | undefined,
@@ -185,6 +149,13 @@ export const aggregateTagStats = (
   };
 };
 
+const normalizeDateKey = (date: string | Date | null | undefined): string | null => {
+  if (!date) return null;
+  const instance = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(instance.getTime())) return null;
+  return instance.toLocaleDateString();
+};
+
 export const buildCalendarDays = (entries: Entry[] | null | undefined): CalendarDay[] => {
   const today = new Date();
   const todayKey = today.toDateString();
@@ -204,14 +175,13 @@ export const buildCalendarDays = (entries: Entry[] | null | undefined): Calendar
   while (current <= lastDay || current.getDay() !== 0) {
     const dateKey = normalizeDateKey(current);
     const entry = dateKey ? lookup.get(dateKey) : undefined;
-    const moodInfo = entry ? getMoodIcon(entry.mood) : null;
+    const moodColor = entry ? getMoodColor(entry.mood) : null;
 
     days.push({
       key: current.toISOString(),
       label: current.getDate(),
       entry,
-      IconComponent: moodInfo?.icon ?? null,
-      iconColor: moodInfo?.color ?? null,
+      moodColor,
       isCurrentMonth: current.getMonth() === today.getMonth(),
       isToday: current.toDateString() === todayKey,
     });
@@ -318,9 +288,6 @@ export const buildWeekOverWeekComparison = (
   return delta > 0 ? 'a bit higher than last week' : 'a bit lower than last week';
 };
 
-// A weekly recap composed entirely from data the stats hook already has — pure
-// recomposition, no new plumbing. Leans on "associated with" framing (#11-13) and
-// gives "pattern discovery" a more prominent narrative than streaks/volume (#1/#16).
 export const buildWeeklyDigest = (
   pastEntries: Entry[] | null | undefined,
   tagStats: TagStats,

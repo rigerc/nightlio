@@ -10,7 +10,6 @@ export interface ParsedScale {
 export interface ParsedDaylioRow {
   full_date: string;
   time: string;
-  /** 1-5, or null when the CSV used a custom mood name we don't recognise. */
   mood: number | null;
   moodName: string;
   activities: string[];
@@ -31,22 +30,20 @@ const MOOD_MAP: Record<string, number> = {
   awful: 1,
 };
 
-// Simple CSV parser that handles RFC-4180 quoted fields.
 function parseCSVLine(line: string): string[] {
   const fields: string[] = [];
   let i = 0;
   while (i <= line.length) {
     if (line[i] === '"') {
-      // Quoted field
       let val = '';
-      i++; // skip opening quote
+      i++;
       while (i < line.length) {
         if (line[i] === '"') {
           if (line[i + 1] === '"') {
             val += '"';
             i += 2;
           } else {
-            i++; // skip closing quote
+            i++;
             break;
           }
         } else {
@@ -57,7 +54,6 @@ function parseCSVLine(line: string): string[] {
       fields.push(val);
       if (line[i] === ',') i++;
     } else {
-      // Unquoted field
       const end = line.indexOf(',', i);
       if (end === -1) {
         fields.push(line.slice(i));
@@ -75,7 +71,6 @@ export function parseDaylioCSV(csvText: string): ParseResult {
   const rows: ParsedDaylioRow[] = [];
   const errors: string[] = [];
 
-  // Split on newlines, keeping quoted newlines intact
   const lines: string[] = [];
   let current = '';
   let inQuote = false;
@@ -133,7 +128,6 @@ export function parseDaylioCSV(csvText: string): ParseResult {
     }
 
     const mood = MOOD_MAP[moodRaw] ?? null;
-
     const activities = activitiesRaw
       ? activitiesRaw.split('|').map((a) => a.trim()).filter(Boolean)
       : [];
@@ -142,7 +136,6 @@ export function parseDaylioCSV(csvText: string): ParseResult {
     if (scalesRaw) {
       for (const token of scalesRaw.split('|')) {
         const trimmed = token.trim();
-        // Format: "Label: TextLabel N/M"
         const match = trimmed.match(/^(.+?):\s*.+?\s+(\d+)\/(\d+)$/);
         if (match) {
           scales.push({ name: match[1].trim(), value: parseInt(match[2], 10), max: parseInt(match[3], 10) });
@@ -153,7 +146,6 @@ export function parseDaylioCSV(csvText: string): ParseResult {
     }
 
     const content = buildEntryContent(noteTitle, noteHtml);
-
     rows.push({ full_date, time: timeRaw || '00:00', mood, moodName: moodRaw, activities, scales, content });
   }
 
@@ -162,21 +154,15 @@ export function parseDaylioCSV(csvText: string): ParseResult {
 
 export function daylioHtmlToMarkdown(html: string): string {
   let md = html;
-  // Line breaks
   md = md.replace(/<br\s*\/?>/gi, '\n');
-  // Bold
   md = md.replace(/<(b|strong)>([\s\S]*?)<\/\1>/gi, '**$2**');
-  // Italic
   md = md.replace(/<(i|em)>([\s\S]*?)<\/\1>/gi, '_$2_');
-  // HTML entities
   md = md.replace(/&nbsp;/gi, ' ');
   md = md.replace(/&amp;/gi, '&');
   md = md.replace(/&lt;/gi, '<');
   md = md.replace(/&gt;/gi, '>');
   md = md.replace(/&quot;/gi, '"');
-  // Strip remaining tags
   md = md.replace(/<[^>]+>/g, '');
-  // Collapse excessive newlines
   md = md.replace(/\n{3,}/g, '\n\n');
   return md.trim();
 }
@@ -229,7 +215,7 @@ export interface MatchedGroup {
 
 export function matchActivitiesToOptions(
   activityNames: string[],
-  groups: Group[]
+  existingGroups: Group[]
 ): { matched: Map<string, MatchedOption>; unmatched: string[] } {
   const matched = new Map<string, MatchedOption>();
   const unmatched: string[] = [];
@@ -237,7 +223,7 @@ export function matchActivitiesToOptions(
   for (const name of activityNames) {
     const lower = name.toLowerCase();
     let found: MatchedOption | null = null;
-    outer: for (const g of groups) {
+    outer: for (const g of existingGroups) {
       if (g.type !== 'category') continue;
       for (const opt of g.options) {
         if (opt.name.toLowerCase() === lower) {
@@ -258,14 +244,14 @@ export function matchActivitiesToOptions(
 
 export function matchScalesToGroups(
   scales: Array<{ name: string; max: number }>,
-  groups: Group[]
+  existingGroups: Group[]
 ): { matched: Map<string, MatchedGroup>; unmatched: Array<{ name: string; max: number }> } {
   const matched = new Map<string, MatchedGroup>();
   const unmatched: Array<{ name: string; max: number }> = [];
 
   for (const scale of scales) {
     const lower = scale.name.toLowerCase();
-    const found = groups.find((g) => g.type === 'slider' && g.name.toLowerCase() === lower);
+    const found = existingGroups.find((g) => g.type === 'slider' && g.name.toLowerCase() === lower);
     if (found) {
       matched.set(scale.name, { groupId: found.id, groupName: found.name });
     } else {
@@ -300,12 +286,7 @@ function levenshtein(a: string, b: string): number {
   return prev[n];
 }
 
-/**
- * Best-effort fuzzy match for an activity name against existing options.
- * Priority: exact after normalization, then containment ("run" -> "Running"),
- * then small edit distance ("excercise" -> "exercise").
- */
-export function suggestActivityMatch(name: string, groups: Group[]): MatchedOption | null {
+export function suggestActivityMatch(name: string, existingGroups: Group[]): MatchedOption | null {
   const target = normalizeForMatch(name);
   if (!target) return null;
 
@@ -313,7 +294,7 @@ export function suggestActivityMatch(name: string, groups: Group[]): MatchedOpti
   let editMatch: MatchedOption | null = null;
   let bestEditDistance = Infinity;
 
-  for (const g of groups) {
+  for (const g of existingGroups) {
     if (g.type !== 'category') continue;
     for (const opt of g.options) {
       const candidate = normalizeForMatch(opt.name);
@@ -355,10 +336,9 @@ export function buildImportPayload(
   matchedActivities: Map<string, MatchedOption>,
   matchedScales: Map<string, MatchedGroup>,
   unmatchedScales: Array<{ name: string; max: number }>,
-  groups: Group[],
+  existingGroups: Group[],
   existingDates: Set<string>
 ): DaylioImportPayload {
-  // Determine if we need the "Imported Activities" group
   const needsImportedGroup = Object.values(activityMappings).some(
     (m) => m.action === 'create' && m.targetGroupId === 'new-imported'
   );
@@ -366,13 +346,12 @@ export function buildImportPayload(
   const newGroups: DaylioImportPayload['new_groups'] = [];
   const newOptions: DaylioImportPayload['new_options'] = [];
   const scaleMaxByName = new Map(unmatchedScales.map((s) => [s.name, s.max]));
-  const groupById = new Map(groups.map((g) => [g.id, g]));
+  const groupById = new Map(existingGroups.map((g) => [g.id, g]));
 
   if (needsImportedGroup) {
     newGroups.push({ temp_id: '__imported_activities__', name: 'Imported Activities', type: 'category' });
   }
 
-  // Create new groups for unmatched scales that need creation
   for (const [scaleName, action] of Object.entries(scaleMappings)) {
     if (action.action === 'create') {
       const max = scaleMaxByName.get(scaleName) ?? 5;
@@ -380,7 +359,6 @@ export function buildImportPayload(
     }
   }
 
-  // Create new options for unmatched activities that need creation
   const activityTempIds = new Map<string, string>();
   for (const [actName, action] of Object.entries(activityMappings)) {
     if (action.action === 'create') {
@@ -412,7 +390,6 @@ export function buildImportPayload(
     const slider_temp_values: Record<string, number> = {};
 
     for (const actName of row.activities) {
-      // Check auto-matched first
       const autoMatch = matchedActivities.get(actName);
       if (autoMatch) {
         option_ids.push(autoMatch.optionId);
@@ -444,7 +421,6 @@ export function buildImportPayload(
     }
 
     const isoTime = `${row.full_date}T${row.time}:00.000Z`;
-
     entries.push({
       date: row.full_date,
       time: isoTime,
@@ -458,33 +434,4 @@ export function buildImportPayload(
   }
 
   return { new_groups: newGroups, new_options: newOptions, entries };
-}
-
-/**
- * Rewrites entries to use real IDs after the prepare call has created
- * new groups/options server-side, so subsequent chunked import requests
- * carry no temp references.
- */
-export function resolveTempIds(
-  entries: DaylioImportPayload['entries'],
-  groupIds: Record<string, number>,
-  optionIds: Record<string, number>
-): DaylioImportPayload['entries'] {
-  return entries.map((entry) => {
-    const option_ids = [
-      ...entry.option_ids,
-      ...entry.option_temp_ids.map((tid) => {
-        const id = optionIds[tid];
-        if (id === undefined) throw new Error(`Server did not return an ID for option "${tid}"`);
-        return id;
-      }),
-    ];
-    const slider_values: Record<number, number> = { ...entry.slider_values };
-    for (const [tempId, value] of Object.entries(entry.slider_temp_values)) {
-      const groupId = groupIds[tempId];
-      if (groupId === undefined) throw new Error(`Server did not return an ID for group "${tempId}"`);
-      slider_values[groupId] = value;
-    }
-    return { ...entry, option_ids, option_temp_ids: [], slider_values, slider_temp_values: {} };
-  });
 }

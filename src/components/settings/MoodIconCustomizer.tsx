@@ -1,42 +1,25 @@
 import { useState } from 'react';
-import { RotateCcw } from 'lucide-react';
-import { MOODS } from '../../utils/moodUtils';
-import { MOOD_ICONS, MOOD_ICON_SETS, getIconComponent, type MoodIconSet } from '../../utils/iconRegistry';
-import { usePreferences } from '../../hooks/usePreferences';
-import IconPicker from '../ui/IconPicker';
-import { Button } from '../ui/button';
-import { cn } from '../../lib/utils';
+import { View, Text, Pressable, ScrollView, Modal } from 'react-native';
+import { RotateCcw } from 'lucide-react-native';
+import { MOODS, MOOD_COLORS } from '../../utils/moodUtils';
+import { MOOD_ICONS, MOOD_ICON_SETS, getIconComponent } from '../../utils/iconRegistry';
+import { usePreferences, DEFAULT_MOOD_ICON_NAMES } from '../../hooks/usePreferences';
 import type { MoodValue } from '../../types';
 
-const MoodIconCustomizer = () => {
-  const { moodIconOverrides, updateMoodIcons, getMoodIconComponent, DEFAULT_MOOD_ICON_NAMES } = usePreferences();
+export function MoodIconCustomizer() {
+  const { moodIconOverrides, updateMoodIcons, getMoodIconComponent } = usePreferences();
   const [openPicker, setOpenPicker] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const effectiveIcons: Record<string, string> = {};
-  for (let v = 1; v <= 5; v++) {
-    effectiveIcons[String(v)] = moodIconOverrides[String(v)] ?? DEFAULT_MOOD_ICON_NAMES[v as MoodValue];
-  }
-
-  const isSetActive = (set: MoodIconSet) =>
-    Object.keys(set.icons).every(k => effectiveIcons[k] === set.icons[k]);
-
-  const applySet = async (set: MoodIconSet) => {
+  const applySet = async (setIcons: Record<string, string>) => {
     setSaving(true);
-    try {
-      await updateMoodIcons({ ...set.icons });
-    } finally {
-      setSaving(false);
-    }
+    try { await updateMoodIcons({ ...setIcons }); } finally { setSaving(false); }
   };
 
-  const handleIconChange = async (moodValue: number, iconName: string | null) => {
+  const handleIconChange = async (moodValue: number, iconName: string) => {
     setSaving(true);
     try {
-      const next = { ...moodIconOverrides };
-      if (iconName === null) delete next[String(moodValue)];
-      else next[String(moodValue)] = iconName;
-      await updateMoodIcons(next);
+      await updateMoodIcons({ ...moodIconOverrides, [String(moodValue)]: iconName });
     } finally {
       setSaving(false);
       setOpenPicker(null);
@@ -45,130 +28,125 @@ const MoodIconCustomizer = () => {
 
   const handleReset = async () => {
     setSaving(true);
-    try {
-      await updateMoodIcons({});
-    } finally {
-      setSaving(false);
-    }
+    try { await updateMoodIcons({}); } finally { setSaving(false); }
   };
 
-  const hasOverrides = Object.keys(moodIconOverrides).length > 0;
-  const activeSetId = MOOD_ICON_SETS.find(isSetActive)?.id ?? null;
+  const effectiveIcons: Record<string, string> = {};
+  for (let v = 1; v <= 5; v++) {
+    effectiveIcons[v] = moodIconOverrides[v] ?? DEFAULT_MOOD_ICON_NAMES[v as MoodValue];
+  }
+
+  const activeSetId = MOOD_ICON_SETS.find(
+    (s) => Object.keys(s.icons).every((k) => effectiveIcons[k] === s.icons[k])
+  )?.id ?? null;
 
   return (
-    <div className="mt-3 flex flex-col gap-5">
-      {/* ── Icon set picker ── */}
-      <div>
-        <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-          Icon set
-        </p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {MOOD_ICON_SETS.map(set => {
-            const active = set.id === activeSetId;
-            return (
-              <button
-                key={set.id}
-                type="button"
-                disabled={saving}
-                onClick={() => void applySet(set)}
-                className={cn(
-                  'flex flex-col items-center gap-2 rounded-xl border p-3 text-left transition-all hover:border-[var(--accent-600)]/50 hover:bg-[var(--bg)] disabled:opacity-50',
-                  active
-                    ? 'border-[var(--accent-600)] bg-[var(--accent-bg-softer)] ring-1 ring-[var(--accent-600)]/30'
-                    : 'border-[var(--border)] bg-[var(--surface)]',
-                )}
-              >
-                <div className="flex items-center gap-1.5">
-                  {[1, 2, 3, 4, 5].map(v => {
-                    const mood = MOODS.find(m => m.value === v);
-                    const Ic = getIconComponent(set.icons[String(v)]);
-                    return (
-                      <Ic
-                        key={v}
-                        size={16}
-                        strokeWidth={1.75}
-                        style={{ color: mood?.color }}
-                      />
-                    );
-                  })}
-                </div>
-                <span
-                  className={cn(
-                    'w-full text-center text-xs leading-tight',
-                    active ? 'font-semibold text-[var(--accent-600)]' : 'text-[var(--text-muted)]',
-                  )}
-                >
-                  {set.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {!activeSetId && (
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
-            Custom — pick a set above or edit individual levels below.
-          </p>
-        )}
-      </div>
+    <View>
+      {/* Icon sets */}
+      <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+        Icon Set
+      </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+        {MOOD_ICON_SETS.map((set) => {
+          const active = set.id === activeSetId;
+          return (
+            <Pressable
+              key={set.id}
+              onPress={() => applySet(set.icons)}
+              disabled={saving}
+              className={`mr-2 px-3 py-2 rounded-xl border items-center ${
+                active ? 'border-primary bg-primary/10' : 'border-border bg-card'
+              }`}
+            >
+              <View className="flex-row gap-1 mb-1">
+                {[1, 2, 3, 4, 5].map((v) => {
+                  const Icon = getIconComponent(set.icons[String(v)]);
+                  return <Icon key={v} size={18} color={MOOD_COLORS[v]} />;
+                })}
+              </View>
+              <Text className={`text-xs ${active ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                {set.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
-      {/* ── Per-level customization ── */}
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-          Customize individual levels
-        </p>
-        <div className="flex flex-col gap-0.5">
-          {MOODS.map(mood => {
-            const overrideName = moodIconOverrides[String(mood.value)];
-            const currentIconName = overrideName ?? DEFAULT_MOOD_ICON_NAMES[mood.value as MoodValue];
-            const CurrentIcon = getMoodIconComponent(mood.value);
-            const isOpen = openPicker === mood.value;
+      {/* Per-level */}
+      <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+        Individual Levels
+      </Text>
+      {MOODS.map((mood) => {
+        const Icon = getMoodIconComponent(mood.value);
+        const iconName = effectiveIcons[String(mood.value)];
+        return (
+          <View key={mood.value} className="flex-row items-center py-2">
+            <Icon size={28} color={mood.color} />
+            <View className="flex-1 ml-3">
+              <Text className="text-foreground font-medium">{mood.label}</Text>
+              <Text className="text-xs text-muted-foreground">{iconName}</Text>
+            </View>
+            <Pressable
+              onPress={() => setOpenPicker(mood.value)}
+              className="px-2 py-1"
+            >
+              <Text className="text-primary text-sm">Change</Text>
+            </Pressable>
+          </View>
+        );
+      })}
 
-            return (
-              <div key={mood.value} className="flex flex-col">
-                <div className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[var(--bg)]">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center">
-                    <CurrentIcon size={28} strokeWidth={1.5} style={{ color: mood.color }} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="font-medium text-[var(--text)]">{mood.label}</span>
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">{currentIconName}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setOpenPicker(isOpen ? null : mood.value)}
-                    className="shrink-0 text-xs text-[var(--accent-600)] transition-colors hover:underline"
-                  >
-                    {isOpen ? 'Close' : 'Change'}
-                  </button>
-                </div>
-                {isOpen && (
-                  <div className="ml-12 mb-2">
-                    <IconPicker
-                      value={currentIconName}
-                      icons={MOOD_ICONS}
-                      onChange={name => void handleIconChange(mood.value, name)}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {hasOverrides && (
-        <Button
-          variant="outline"
-          onClick={() => void handleReset()}
+      {Object.keys(moodIconOverrides).length > 0 && (
+        <Pressable
+          onPress={handleReset}
           disabled={saving}
-          className="w-fit gap-2 text-sm"
+          className="flex-row items-center gap-2 mt-2 py-2"
         >
-          <RotateCcw size={14} />
-          Reset to defaults
-        </Button>
+          <RotateCcw size={14} color="#6b7280" />
+          <Text className="text-muted-foreground text-sm">Reset to defaults</Text>
+        </Pressable>
       )}
-    </div>
-  );
-};
 
-export default MoodIconCustomizer;
+      {/* Icon picker modal */}
+      <Modal
+        visible={openPicker !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setOpenPicker(null)}
+      >
+        <View className="flex-1 bg-background">
+          <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
+            <Text className="text-lg font-semibold text-foreground">
+              Choose Icon for {openPicker !== null ? MOODS.find(m => m.value === openPicker)?.label : ''}
+            </Text>
+            <Pressable onPress={() => setOpenPicker(null)}>
+              <Text className="text-primary">Done</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16 }}>
+            <View className="flex-row flex-wrap gap-2">
+              {MOOD_ICONS.map((entry) => {
+                const Icon = entry.component;
+                const selected = openPicker !== null && effectiveIcons[String(openPicker)] === entry.name;
+                return (
+                  <Pressable
+                    key={entry.name}
+                    onPress={() => openPicker !== null && handleIconChange(openPicker, entry.name)}
+                    className={`w-16 h-16 rounded-xl items-center justify-center border ${
+                      selected ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                    }`}
+                  >
+                    <Icon size={24} color={selected ? '#8b5cf6' : '#6b7280'} />
+                    <Text className="text-xs text-muted-foreground mt-1" numberOfLines={1}>
+                      {entry.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+    </View>
+  );
+}

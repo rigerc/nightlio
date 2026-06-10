@@ -1,24 +1,23 @@
-import { Progress } from './progress';
+import { View } from 'react-native';
 
 interface ProgressBarProps {
-  value?: number;
-  max?: number;
-  label?: string;
+  value: number;
+  max: number;
+  color?: string;
+  height?: number;
 }
 
-const ProgressBar = ({ value = 0, max = 100, label }: ProgressBarProps) => {
-  const pct = Math.min(100, Math.max(0, (value / (max || 1)) * 100));
+export function ProgressBar({ value, max, color = '#8b5cf6', height = 8 }: ProgressBarProps) {
+  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
-    <div className="w-full">
-      {label && (
-        <div className="flex justify-between mb-1.5 text-xs text-[var(--text-muted)]">
-          <span>{label}</span>
-          <span>{Math.round(pct)}%</span>
-        </div>
-      )}
-      <Progress value={value} max={max} />
-    </div>
+    <View
+      className="w-full rounded-full overflow-hidden"
+      style={{ height, backgroundColor: color + '22' }}
+    >
+      <View
+        className="h-full rounded-full"
+        style={{ width: `${pct}%`, backgroundColor: color }}
+      />
+    </View>
   );
-};
-
-export default ProgressBar;
+}

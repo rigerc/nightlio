@@ -1,38 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
-import apiService from '../services/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getMoodEntries } from '../services/moodService';
 import type { Entry } from '../types';
+
+export const ENTRIES_QUERY_KEY = ['entries'] as const;
 
 export interface UseMoodDataReturn {
   pastEntries: Entry[];
-  setPastEntries: Dispatch<SetStateAction<Entry[]>>;
   loading: boolean;
   error: string | null;
   refreshHistory: () => Promise<void>;
 }
 
 export const useMoodData = (): UseMoodDataReturn => {
-  const [pastEntries, setPastEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ENTRIES_QUERY_KEY,
+    queryFn: getMoodEntries,
+  });
 
-  const loadHistory = useCallback(async (): Promise<void> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiService.getMoodEntries();
-      setPastEntries(data);
-    } catch (err) {
-      console.error('Failed to load history:', err);
-      setError('Failed to load mood history');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadHistory();
-  }, [loadHistory]);
-
-  return { pastEntries, setPastEntries, loading, error, refreshHistory: loadHistory };
+  return {
+    pastEntries: data ?? [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refreshHistory: () => queryClient.invalidateQueries({ queryKey: ENTRIES_QUERY_KEY }),
+  };
 };

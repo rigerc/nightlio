@@ -1,23 +1,37 @@
+import { Modal as RNModal, View, Text, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import type { ReactNode } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
+import { X } from 'lucide-react-native';
 
 interface ModalProps {
   open: boolean;
-  title: string;
+  title?: string;
   children: ReactNode;
   onClose?: () => void;
-  maxWidth?: number;
 }
 
-const Modal = ({ open, title, children, onClose, maxWidth = 520 }: ModalProps) => (
-  <Dialog open={open} onOpenChange={(v) => { if (!v && onClose) onClose(); }}>
-    <DialogContent style={{ maxWidth }} className="p-0">
-      <DialogHeader className="px-5 pt-5 pb-4 border-b border-[var(--border)] mb-0">
-        <DialogTitle>{title}</DialogTitle>
-      </DialogHeader>
-      <div className="p-5">{children}</div>
-    </DialogContent>
-  </Dialog>
-);
-
-export default Modal;
+export function Modal({ open, title, children, onClose }: ModalProps) {
+  return (
+    <RNModal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Pressable className="flex-1 bg-black/50 justify-center px-4" onPress={onClose}>
+          <Pressable className="bg-card rounded-2xl overflow-hidden" onPress={() => {}}>
+            {title && (
+              <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
+                <Text className="text-lg font-semibold text-foreground">{title}</Text>
+                {onClose && (
+                  <Pressable onPress={onClose} hitSlop={8}>
+                    <X size={20} color="#6b7280" />
+                  </Pressable>
+                )}
+              </View>
+            )}
+            <View className="p-5">{children}</View>
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </RNModal>
+  );
+}

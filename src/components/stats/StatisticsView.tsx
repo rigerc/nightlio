@@ -1,289 +1,311 @@
-import { useCallback, useRef, useState } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Cell,
-} from 'recharts';
-import Skeleton from '../ui/Skeleton';
-import { exportSVGToPNG, exportDataToCSV } from '../../utils/exportUtils';
+import { ScrollView, View, Text, Pressable } from 'react-native';
+import { CartesianChart, Line, Bar } from 'victory-native';
 import useStatisticsViewData from './useStatisticsViewData';
 import {
-  RANGE_OPTIONS, TOOLTIP_STYLE, MOOD_LEGEND, MOOD_FULL_LABELS, MOOD_SHORTHANDS, WEEK_DAYS, formatTrendTooltip,
+  RANGE_OPTIONS,
+  MOOD_LEGEND,
+  MOOD_FULL_LABELS,
+  WEEK_DAYS,
 } from './statisticsViewUtils';
-import type { CalendarDay, MoodDistributionDatum, OverviewCard, TagStats, WeeklyDigest } from './statisticsViewUtils';
+import type {
+  CalendarDay,
+  MoodDistributionDatum,
+  OverviewCard,
+  TagStats,
+  WeeklyDigest,
+} from './statisticsViewUtils';
 import type { Entry, Statistics } from '../../types';
-import './StatisticsView.css';
-
-const MoodLegend = () => (
-  <div className="statistics-view__legend">
-    {MOOD_LEGEND.map(({ value, icon: LegendIcon, color, label }) => (
-      <div key={value} className="statistics-view__legend-item">
-        <LegendIcon size={16} style={{ color }} />
-        <span>{label}</span>
-      </div>
-    ))}
-  </div>
-);
-
-const StatisticsOverviewGrid = ({ cards }: { cards: OverviewCard[] }) => (
-  <div className="statistics-view__overview-grid">
-    {cards.map(({ key, value, label, helperText }) => (
-      <div key={key} className="statistics-view__card statistics-view__overview-card">
-        <div className="statistics-view__overview-value">{value}</div>
-        <div className="statistics-view__overview-label">{label}</div>
-        {helperText && <div className="statistics-view__overview-helper">{helperText}</div>}
-      </div>
-    ))}
-  </div>
-);
-
-const SectionHeader = ({ title, children }: { title: string; children?: React.ReactNode }) => (
-  <div className="statistics-view__section-header">
-    <h3 className="statistics-view__section-title">{title}</h3>
-    <div className="statistics-view__button-row">{children}</div>
-  </div>
-);
-
-const RangeSelector = ({ range, onChange }: { range: number; onChange: (r: number) => void }) => (
-  <div className="statistics-view__range-buttons">
-    {RANGE_OPTIONS.map((option) => (
-      <button
-        key={option}
-        type="button"
-        onClick={() => onChange(option)}
-        className={`statistics-view__range-button${range === option ? ' is-active' : ''}`}
-      >
-        {option}d
-      </button>
-    ))}
-  </div>
-);
-
-interface MoodTrendSectionProps {
-  chartData: object[];
-  range: number;
-  onChangeRange: (r: number) => void;
-  onExportPNG: () => void;
-  onExportCSV: () => void;
-  containerRef: React.RefObject<HTMLDivElement | null>;
-}
-
-const MoodTrendSection = ({ chartData, range, onChangeRange, onExportPNG, onExportCSV, containerRef }: MoodTrendSectionProps) => (
-  <div ref={containerRef} className="statistics-view__card statistics-view__section" id="mood-trend">
-    <SectionHeader title="Mood Trend">
-      <RangeSelector range={range} onChange={onChangeRange} />
-      <button type="button" className="statistics-view__ghost-button" onClick={onExportPNG}>Export PNG</button>
-      <button type="button" className="statistics-view__ghost-button" onClick={onExportCSV}>Export CSV</button>
-    </SectionHeader>
-    <ResponsiveContainer width="100%" height={320}>
-      <LineChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-        <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} />
-        <YAxis domain={[0.5, 5.5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} width={20} tickFormatter={(value: number) => MOOD_SHORTHANDS[value] || ''} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} formatter={formatTrendTooltip as never} />
-        <Line type="monotone" dataKey="mood" stroke="var(--accent-600)" strokeWidth={3} dot={{ fill: 'var(--accent-600)', strokeWidth: 2, r: 6 }} connectNulls={false} />
-        <Line type="monotone" dataKey="ma" stroke="var(--danger)" strokeDasharray="6 6" strokeWidth={2} dot={false} connectNulls />
-      </LineChart>
-    </ResponsiveContainer>
-    <MoodLegend />
-  </div>
-);
-
-interface DistributionSectionProps {
-  chartData: MoodDistributionDatum[];
-  onExportPNG: () => void;
-  onExportCSV: () => void;
-  containerRef: React.RefObject<HTMLDivElement | null>;
-}
-
-const DistributionSection = ({ chartData, onExportPNG, onExportCSV, containerRef }: DistributionSectionProps) => (
-  <div ref={containerRef} className="statistics-view__card statistics-view__section" id="mood-distribution">
-    <SectionHeader title="Mood Distribution">
-      <button type="button" className="statistics-view__ghost-button" onClick={onExportPNG}>Export PNG</button>
-      <button type="button" className="statistics-view__ghost-button" onClick={onExportCSV}>Export CSV</button>
-    </SectionHeader>
-    <ResponsiveContainer width="100%" height={320}>
-      <BarChart data={chartData} margin={{ top: 30, right: 20, left: 0, bottom: 20 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-        <XAxis dataKey="mood" tick={{ fontSize: 16, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} />
-        <YAxis tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} allowDecimals={false} domain={[0, 'dataMax + 1']} width={20} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: unknown, _name: unknown, props: { payload?: { label?: string } }) => [`${value} entries`, props.payload?.label ?? '']} />
-        <Bar dataKey="count" radius={[4, 4, 0, 0]} label={{ position: 'top', fontSize: 12, fontWeight: 600, fill: 'var(--text)' }}>
-          {chartData.map((entry) => <Cell key={entry.key} fill={entry.fill} />)}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-    <MoodLegend />
-  </div>
-);
-
-const CONFIDENCE_LABELS: Record<TagStats['topPositive'][number]['confidence'], string> = {
-  low: 'early signal',
-  medium: 'some signal',
-  high: 'consistent pattern',
-};
-
-interface TagListProps {
-  heading: string;
-  toneClass: string;
-  tags: TagStats['topPositive'];
-  emptyLabel: string;
-  valueColor: string;
-}
-
-const TagList = ({ heading, toneClass, tags, emptyLabel, valueColor }: TagListProps) => (
-  <div className="statistics-view__tag-list">
-    <h4 className={`statistics-view__tag-heading ${toneClass}`}>{heading}</h4>
-    {tags.length === 0 && <div className="statistics-view__tag-empty">{emptyLabel}</div>}
-    {tags.map((tag) => (
-      <div key={tag.tag} className="statistics-view__tag-item">
-        <span>{tag.tag}</span>
-        <span>
-          <span style={{ color: valueColor }}>{tag.avgMood.toFixed(2)} ({tag.count})</span>
-          <span className="statistics-view__tag-confidence">{CONFIDENCE_LABELS[tag.confidence]}</span>
-        </span>
-      </div>
-    ))}
-  </div>
-);
-
-const TagCorrelationsSection = ({ tagStats, onExportCSV }: { tagStats: TagStats; onExportCSV: () => void }) => {
-  if (!tagStats.topPositive.length && !tagStats.topNegative.length) return null;
-  return (
-    <div className="statistics-view__card statistics-view__section">
-      <SectionHeader title="Tags Associated With Your Mood">
-        <button type="button" className="statistics-view__ghost-button" onClick={onExportCSV}>Export CSV</button>
-      </SectionHeader>
-      <div className="statistics-view__tag-grid">
-        <TagList heading="Often logged on better days" toneClass="statistics-view__tag-heading--positive" tags={tagStats.topPositive} emptyLabel="Keep logging — patterns like this take a few weeks to emerge" valueColor="var(--mood-4)" />
-        <TagList heading="Often logged on harder days" toneClass="statistics-view__tag-heading--negative" tags={tagStats.topNegative} emptyLabel="Keep logging — patterns like this take a few weeks to emerge" valueColor="var(--mood-1)" />
-      </div>
-      <div className="statistics-view__tag-note">
-        These are associations, not causes — a tag showing up alongside better or harder days doesn't mean it's the reason. The number shown is each day's overall (averaged) mood on days that tag was logged; "early signal" means there's only a little data so far, while "consistent pattern" reflects a tag seen often enough to take more seriously.
-      </div>
-    </div>
-  );
-};
-
-const DigestRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="statistics-view__tag-item">
-    <span>{label}</span>
-    <span>{value}</span>
-  </div>
-);
-
-const WeeklyDigestSection = ({ digest }: { digest: WeeklyDigest }) => {
-  const hasContent = digest.bestDay || digest.hardestDay || digest.topActivities.length > 0 || digest.trendComparison || digest.emergingPattern;
-  if (!hasContent) return null;
-
-  return (
-    <div className="statistics-view__card statistics-view__section">
-      <SectionHeader title="This Week, At a Glance" />
-      <div className="statistics-view__tag-list">
-        {digest.bestDay && (
-          <DigestRow label="Best day" value={`${digest.bestDay.label} — ${MOOD_FULL_LABELS[digest.bestDay.mood] ?? ''}`} />
-        )}
-        {digest.hardestDay && (
-          <DigestRow label="Hardest day" value={`${digest.hardestDay.label} — ${MOOD_FULL_LABELS[digest.hardestDay.mood] ?? ''}`} />
-        )}
-        {digest.topActivities.length > 0 && (
-          <DigestRow
-            label="Most-logged activities"
-            value={digest.topActivities.map((a) => `${a.tag} (${a.count})`).join(', ')}
-          />
-        )}
-        {digest.trendComparison && <DigestRow label="Compared to last week" value={digest.trendComparison} />}
-        {digest.emergingPattern && (
-          <DigestRow
-            label="Worth noticing"
-            value={`"${digest.emergingPattern.tag}" has often shown up on days averaging ${digest.emergingPattern.avgMood.toFixed(2)}`}
-          />
-        )}
-      </div>
-      <div className="statistics-view__tag-note">
-        A quick recap, not a verdict — these are associations drawn from a single week and meant to spark noticing, not conclusions to act on.
-      </div>
-    </div>
-  );
-};
-
-const MoodCalendarSection = ({ days }: { days: CalendarDay[] }) => (
-  <div className="statistics-view__card statistics-view__calendar-card">
-    <h3 className="statistics-view__calendar-title">Mood Calendar</h3>
-    <div className="statistics-view__calendar-grid">
-      {WEEK_DAYS.map((day) => <div key={day} className="statistics-view__calendar-label">{day}</div>)}
-      {days.map(({ key, label, entry, IconComponent, iconColor, isCurrentMonth, isToday }) => (
-        <div
-          key={key}
-          className={`statistics-view__calendar-day${entry ? ' has-entry' : ''}${isCurrentMonth ? '' : ' is-outside'}${isToday ? ' is-today' : ''}`}
-          style={{ background: entry && iconColor ? `color-mix(in oklab, ${iconColor} 18%, transparent)` : undefined, color: entry && iconColor ? iconColor : undefined }}
-        >
-          {entry && IconComponent ? <IconComponent size={16} /> : label}
-        </div>
-      ))}
-    </div>
-  </div>
-);
 
 interface StatisticsViewProps {
   statistics: Statistics | null;
   pastEntries: Entry[];
-  loading: boolean;
-  error: string | null;
+  range: number;
+  onRangeChange: (r: number) => void;
 }
 
-const StatisticsView = ({ statistics, pastEntries, loading, error }: StatisticsViewProps) => {
-  const [range, setRange] = useState<number>(RANGE_OPTIONS[0]);
-  const trendRef = useRef<HTMLDivElement>(null);
-  const distributionRef = useRef<HTMLDivElement>(null);
-
-  const { hasStatistics, weeklyMoodData, trendChartData, moodDistributionData, tagStats, calendarDays, overviewCards, weeklyDigest } =
-    useStatisticsViewData(statistics, pastEntries, range);
-
-  const handleExportTrendPNG = useCallback(() => {
-    const svg = trendRef.current?.querySelector('svg');
-    if (svg) exportSVGToPNG(svg, `mood-trend-${range}d.png`);
-  }, [range]);
-
-  const handleExportTrendCSV = useCallback(() => {
-    exportDataToCSV(weeklyMoodData as unknown as Record<string, unknown>[], ['date', 'mood'], `mood-trend-${range}d.csv`);
-  }, [weeklyMoodData, range]);
-
-  const handleExportDistributionPNG = useCallback(() => {
-    const svg = distributionRef.current?.querySelector('svg');
-    if (svg) exportSVGToPNG(svg, 'mood-distribution.png');
-  }, []);
-
-  const handleExportDistributionCSV = useCallback(() => {
-    const rows = moodDistributionData.map(({ label, count }) => ({ mood: label, count }));
-    exportDataToCSV(rows, ['mood', 'count'], 'mood-distribution.csv');
-  }, [moodDistributionData]);
-
-  const handleExportTagCSV = useCallback(() => {
-    exportDataToCSV(tagStats.all as unknown as Record<string, unknown>[], ['tag', 'count', 'avgMood'], 'tag-correlations.csv');
-  }, [tagStats]);
-
-  if (loading) return (
-    <div className="statistics-view">
-      <div className="statistics-view__overview-grid">
-        {[1, 2, 3, 4].map((i) => <Skeleton key={i} height={120} radius={12} />)}
-      </div>
-      <Skeleton height={36} width={260} style={{ marginBottom: 12 }} />
-      <Skeleton height={320} radius={16} />
-    </div>
-  );
-  if (error) return <div className="statistics-view statistics-view__status statistics-view__status--error">{error}</div>;
-  if (!hasStatistics) return <div className="statistics-view statistics-view__status">No statistics available</div>;
-
+function OverviewCards({ cards }: { cards: OverviewCard[] }) {
   return (
-    <div className="statistics-view">
-      <StatisticsOverviewGrid cards={overviewCards} />
-      <MoodTrendSection chartData={trendChartData} range={range} onChangeRange={setRange} onExportPNG={handleExportTrendPNG} onExportCSV={handleExportTrendCSV} containerRef={trendRef} />
-      <DistributionSection chartData={moodDistributionData} onExportPNG={handleExportDistributionPNG} onExportCSV={handleExportDistributionCSV} containerRef={distributionRef} />
-      <WeeklyDigestSection digest={weeklyDigest} />
-      <TagCorrelationsSection tagStats={tagStats} onExportCSV={handleExportTagCSV} />
-      <MoodCalendarSection days={calendarDays} />
-    </div>
+    <View className="flex-row flex-wrap gap-3 px-4 mb-4">
+      {cards.map(({ key, value, label, helperText }) => (
+        <View
+          key={key}
+          className="flex-1 min-w-[40%] bg-card border border-border rounded-xl p-4"
+        >
+          <Text className="text-2xl font-bold text-foreground">{String(value)}</Text>
+          <Text className="text-sm text-muted-foreground mt-0.5">{label}</Text>
+          {helperText && (
+            <Text className="text-xs text-primary mt-1">{helperText}</Text>
+          )}
+        </View>
+      ))}
+    </View>
   );
+}
+
+function RangeSelector({ range, onChange }: { range: number; onChange: (r: number) => void }) {
+  return (
+    <View className="flex-row gap-2">
+      {RANGE_OPTIONS.map((opt) => (
+        <Pressable
+          key={opt}
+          onPress={() => onChange(opt)}
+          className={`px-3 py-1 rounded-full border ${
+            range === opt ? 'bg-primary border-primary' : 'bg-card border-border'
+          }`}
+        >
+          <Text className={`text-sm font-medium ${range === opt ? 'text-white' : 'text-foreground'}`}>
+            {opt}d
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function SectionCard({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <View className="mx-4 mb-4 bg-card border border-border rounded-xl p-4">
+      <View className="flex-row items-center justify-between mb-3">
+        <Text className="font-semibold text-foreground text-base">{title}</Text>
+        {right}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function MoodLegendRow() {
+  return (
+    <View className="flex-row justify-between mt-3 flex-wrap gap-1">
+      {MOOD_LEGEND.map(({ value, color, label }) => (
+        <View key={value} className="flex-row items-center gap-1">
+          <View className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+          <Text className="text-xs text-muted-foreground">{label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function TrendChart({ data, range, onChangeRange }: { data: object[]; range: number; onChangeRange: (r: number) => void }) {
+  return (
+    <SectionCard title="Mood Trend" right={<RangeSelector range={range} onChange={onChangeRange} />}>
+      {data.length > 1 ? (
+        <View style={{ height: 200 }}>
+          <CartesianChart
+            data={data as Array<{ date: string; mood: number | null; ma: number | null }>}
+            xKey="date"
+            yKeys={['mood', 'ma']}
+            domainPadding={{ top: 20, bottom: 10 }}
+            domain={{ y: [0.5, 5.5] }}
+          >
+            {({ points }) => (
+              <>
+                <Line
+                  points={points.mood}
+                  color="#8b5cf6"
+                  strokeWidth={3}
+                  connectMissingData={false}
+                />
+                <Line
+                  points={points.ma}
+                  color="#ef4444"
+                  strokeWidth={2}
+                  strokeDasharray={[6, 3]}
+                  connectMissingData
+                />
+              </>
+            )}
+          </CartesianChart>
+        </View>
+      ) : (
+        <View className="h-24 items-center justify-center">
+          <Text className="text-muted-foreground text-sm">Not enough data yet</Text>
+        </View>
+      )}
+      <MoodLegendRow />
+    </SectionCard>
+  );
+}
+
+function DistributionChart({ data }: { data: MoodDistributionDatum[] }) {
+  const hasData = data.some((d) => d.count > 0);
+  return (
+    <SectionCard title="Mood Distribution">
+      {hasData ? (
+        <View style={{ height: 180 }}>
+          <CartesianChart
+            data={data}
+            xKey="mood"
+            yKeys={['count']}
+            domainPadding={{ left: 20, right: 20, top: 20 }}
+          >
+            {({ points, chartBounds }) => (
+              <Bar
+                points={points.count}
+                chartBounds={chartBounds}
+                roundedCorners={{ topLeft: 4, topRight: 4 }}
+                color="#8b5cf6"
+              />
+            )}
+          </CartesianChart>
+        </View>
+      ) : (
+        <View className="h-24 items-center justify-center">
+          <Text className="text-muted-foreground text-sm">Log more entries to see your distribution</Text>
+        </View>
+      )}
+      <MoodLegendRow />
+    </SectionCard>
+  );
+}
+
+const CONFIDENCE_LABELS: Record<string, string> = {
+  low: 'early',
+  medium: 'some signal',
+  high: 'consistent',
 };
 
-export default StatisticsView;
+function TagCorrelations({ tagStats }: { tagStats: TagStats }) {
+  if (!tagStats.topPositive.length && !tagStats.topNegative.length) return null;
+  return (
+    <SectionCard title="Tags & Mood">
+      {tagStats.topPositive.length > 0 && (
+        <>
+          <Text className="text-xs font-semibold text-green-500 mb-1">Better days</Text>
+          {tagStats.topPositive.slice(0, 3).map((tag) => (
+            <View key={tag.tag} className="flex-row justify-between py-1">
+              <Text className="text-foreground text-sm">{tag.tag}</Text>
+              <Text className="text-sm text-green-500">
+                {tag.avgMood.toFixed(1)} · {CONFIDENCE_LABELS[tag.confidence]}
+              </Text>
+            </View>
+          ))}
+        </>
+      )}
+      {tagStats.topNegative.length > 0 && (
+        <>
+          <Text className="text-xs font-semibold text-red-400 mt-2 mb-1">Harder days</Text>
+          {tagStats.topNegative.slice(0, 3).map((tag) => (
+            <View key={tag.tag} className="flex-row justify-between py-1">
+              <Text className="text-foreground text-sm">{tag.tag}</Text>
+              <Text className="text-sm text-red-400">
+                {tag.avgMood.toFixed(1)} · {CONFIDENCE_LABELS[tag.confidence]}
+              </Text>
+            </View>
+          ))}
+        </>
+      )}
+    </SectionCard>
+  );
+}
+
+function WeeklyDigestSection({ digest }: { digest: WeeklyDigest }) {
+  const hasContent =
+    digest.bestDay || digest.hardestDay || digest.topActivities.length > 0 || digest.trendComparison;
+  if (!hasContent) return null;
+
+  return (
+    <SectionCard title="This Week">
+      {digest.bestDay && (
+        <View className="flex-row justify-between py-1">
+          <Text className="text-muted-foreground text-sm">Best day</Text>
+          <Text className="text-foreground text-sm">
+            {digest.bestDay.label} — {MOOD_FULL_LABELS[digest.bestDay.mood]}
+          </Text>
+        </View>
+      )}
+      {digest.hardestDay && (
+        <View className="flex-row justify-between py-1">
+          <Text className="text-muted-foreground text-sm">Hardest day</Text>
+          <Text className="text-foreground text-sm">
+            {digest.hardestDay.label} — {MOOD_FULL_LABELS[digest.hardestDay.mood]}
+          </Text>
+        </View>
+      )}
+      {digest.topActivities.length > 0 && (
+        <View className="flex-row justify-between py-1">
+          <Text className="text-muted-foreground text-sm">Top activities</Text>
+          <Text className="text-foreground text-sm flex-1 text-right ml-4" numberOfLines={2}>
+            {digest.topActivities.map((a) => a.tag).join(', ')}
+          </Text>
+        </View>
+      )}
+      {digest.trendComparison && (
+        <View className="flex-row justify-between py-1">
+          <Text className="text-muted-foreground text-sm">vs last week</Text>
+          <Text className="text-foreground text-sm">{digest.trendComparison}</Text>
+        </View>
+      )}
+    </SectionCard>
+  );
+}
+
+function MoodCalendar({ days }: { days: CalendarDay[] }) {
+  return (
+    <View className="mx-4 mb-4 bg-card border border-border rounded-xl p-4">
+      <Text className="font-semibold text-foreground text-base mb-3">Mood Calendar</Text>
+      <View className="flex-row">
+        {WEEK_DAYS.map((d) => (
+          <View key={d} className="flex-1 items-center mb-1">
+            <Text className="text-xs text-muted-foreground">{d}</Text>
+          </View>
+        ))}
+      </View>
+      <View className="flex-row flex-wrap">
+        {days.map(({ key, label, moodColor, isCurrentMonth, isToday }) => (
+          <View
+            key={key}
+            className={`items-center justify-center rounded-lg m-0.5 ${isToday ? 'border border-primary' : ''}`}
+            style={{
+              width: '13%',
+              aspectRatio: 1,
+              backgroundColor: moodColor ? moodColor + '30' : undefined,
+              opacity: isCurrentMonth ? 1 : 0.3,
+            }}
+          >
+            <Text
+              className="text-xs font-medium"
+              style={{ color: moodColor ?? '#6b7280' }}
+            >
+              {label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export function StatisticsView({ statistics, pastEntries, range, onRangeChange }: StatisticsViewProps) {
+  const {
+    hasStatistics,
+    trendChartData,
+    moodDistributionData,
+    tagStats,
+    calendarDays,
+    overviewCards,
+    weeklyDigest,
+  } = useStatisticsViewData(statistics, pastEntries, range);
+
+  if (!hasStatistics) {
+    return (
+      <View className="flex-1 items-center justify-center p-8">
+        <Text className="text-muted-foreground text-center">
+          Log a few entries to see your statistics here.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}>
+      <OverviewCards cards={overviewCards} />
+      <TrendChart data={trendChartData} range={range} onChangeRange={onRangeChange} />
+      <DistributionChart data={moodDistributionData} />
+      <WeeklyDigestSection digest={weeklyDigest} />
+      <TagCorrelations tagStats={tagStats} />
+      <MoodCalendar days={calendarDays} />
+    </ScrollView>
+  );
+}

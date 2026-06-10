@@ -79,7 +79,6 @@ export interface Goal {
 export interface GoalCompletion {
   id: number;
   goal_id: number;
-  user_id: number;
   date: string;
   created_at: string;
 }
@@ -92,23 +91,6 @@ export interface Statistics {
   };
   mood_distribution: Record<string, number>;
   current_streak: number;
-}
-
-export interface User {
-  id: number;
-  name: string;
-  email?: string;
-  avatar_url?: string;
-}
-
-export interface AppConfig {
-  enable_google_oauth: boolean;
-  enable_mood_music: boolean;
-  enable_google_health: boolean;
-  local_login_requires_access_key?: boolean;
-  clerk_enabled?: boolean;
-  google_client_id?: string;
-  google_health_client_id?: string;
 }
 
 export type FitnessDataType =
@@ -137,7 +119,6 @@ export interface FitnessConnection {
 
 export interface Achievement {
   id: number;
-  user_id: number;
   achievement_type: string;
   earned_at: string;
   name: string;
@@ -157,9 +138,4 @@ export interface MoodUpdateResponse {
   status: string;
   message: string;
   entry: Entry;
-}
-
-export interface AuthResponse {
-  token?: string;
-  user: User;
 }
